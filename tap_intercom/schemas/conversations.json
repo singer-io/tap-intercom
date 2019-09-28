@@ -1,0 +1,224 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "assignee": {
+      "type": ["null", "object"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": ["null", "integer"]
+        },
+        "type": {
+          "type": ["null", "string"]
+        }
+      }
+    },
+    "conversation_message": {
+      "type": ["null", "object"],
+      "additionalProperties": false,
+      "properties": {
+        "attachments": {
+          "type": ["null", "array"],
+          "items": {}
+        },
+        "author": {
+          "type": ["null", "object"],
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": ["null", "integer"]
+            },
+            "type": {
+              "type": ["null", "string"]
+            }
+          }
+        },
+        "body": {
+          "type": ["null", "string"]
+        },
+        "delivered_as": {
+          "type": ["null", "string"]
+        },
+        "id": {
+          "type": ["null", "string"]
+        },
+        "subject": {
+          "type": ["null", "string"]
+        },
+        "type": {
+          "type": ["null", "string"]
+        },
+        "url": {
+          "type": ["null", "string"]
+        }
+      }
+    },
+    "conversation_rating": {
+      "type": ["null", "object"],
+      "additionalProperties": false,
+      "properties": {
+        "created_at": {
+          "type": ["null", "string"],
+          "format": "date-time"
+        },
+        "customer": {
+          "type": ["null", "object"],
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": ["null", "integer"]
+            },
+            "type": {
+              "type": ["null", "string"]
+            }
+          }
+        },
+        "rating": {
+          "type": ["null", "integer"]
+        },
+        "remark": {
+          "type": ["null", "string"]
+        },
+        "teammate": {
+          "type": ["null", "object"],
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": ["null", "integer"]
+            },
+            "type": {
+              "type": ["null", "string"]
+            }
+          }
+        }
+      }
+    },
+    "created_at": {
+      "type": ["null", "string"],
+      "format": "date-time"
+    },
+    "customer_first_reply": {
+      "type": ["null", "object"],
+      "additionalProperties": false,
+      "properties": {
+        "created_at": {
+          "type": ["null", "string"],
+          "format": "date-time"
+        },
+        "type": {
+          "type": ["null", "string"]
+        },
+        "url": {
+          "type": ["null", "string"]
+        }
+      }
+    },
+    "customers": {
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "type": ["null", "object"],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": ["null", "integer"]
+              },
+              "type": {
+                "type": ["null", "string"]
+              }
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "id": {
+      "type": ["null", "string"]
+    },
+    "open": {
+      "type": ["null", "boolean"]
+    },
+    "read": {
+      "type": ["null", "boolean"]
+    },
+    "sent_at": {
+      "type": ["null", "string"],
+      "format": "date-time"
+    },
+    "snoozed_until": {
+      "type": ["null", "string"],
+      "format": "date-time"
+    },
+    "state": {
+      "type": ["null", "string"]
+    },
+    "tags": {
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "type": ["null", "object"],
+            "additionalProperties": false,
+            "properties": {
+              "applied_at": {
+                "type": ["null", "string"],
+                "format": "date-time"
+              },
+              "applied_by": {
+                "type": ["null", "object"],
+                "additionalProperties": false,
+                "properties": {
+                  "id": {
+                    "type": ["null", "integer"]
+                  },
+                  "type": {
+                    "type": ["null", "string"]
+                  }
+                }
+              },
+              "id": {
+                "type": ["null", "integer"]
+              },
+              "name": {
+                "type": ["null", "string"]
+              },
+              "type": {
+                "type": ["null", "string"]
+              }
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "type": {
+      "type": ["null", "string"]
+    },
+    "updated_at": {
+      "type": ["null", "string"],
+      "format": "date-time"
+    },
+    "user": {
+      "type": ["null", "object"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": ["null", "integer"]
+        },
+        "type": {
+          "type": ["null", "string"]
+        }
+      }
+    },
+    "waiting_since": {
+      "type": ["null", "string"],
+      "format": "date-time"
+    }
+  }
+}

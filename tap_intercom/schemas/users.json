@@ -1,0 +1,217 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "anonymous": {
+      "type": ["null", "boolean"]
+    },
+    "app_id": {
+      "type": ["null", "string"]
+    },
+    "avatar": {
+      "type": ["null", "object"],
+      "additionalProperties": false,
+      "properties": {
+        "image_url": {
+          "type": ["null", "string"]
+        },
+        "type": {
+          "type": ["null", "string"]
+        }
+      }
+    },
+    "companies": {
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "type": ["null", "object"],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": ["null", "string"]
+              }
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "created_at": {
+      "type": ["null", "string"],
+      "format": "date-time"
+    },
+    "custom_attributes": {
+      "type": ["null", "object"],
+      "additionalProperties": true
+    },
+    "do_not_track": {
+      "type": ["null", "boolean"]
+    },
+    "email": {
+      "type": ["null", "string"]
+    },
+    "has_hard_bounced": {
+      "type": ["null", "boolean"]
+    },
+    "id": {
+      "type": ["null", "string"]
+    },
+    "last_request_at": {
+      "type": ["null", "string"],
+      "format": "date-time"
+    },
+    "location_data": {
+      "type": ["null", "object"],
+      "additionalProperties": false,
+      "properties": {
+        "city_name": {
+          "type": ["null", "string"]
+        },
+        "continent_code": {
+          "type": ["null", "string"]
+        },
+        "country_code": {
+          "type": ["null", "string"]
+        },
+        "country_name": {
+          "type": ["null", "string"]
+        },
+        "postal_code": {
+          "type": ["null", "string"]
+        },
+        "region_name": {
+          "type": ["null", "string"]
+        },
+        "timezone": {
+          "type": ["null", "string"]
+        },
+        "type": {
+          "type": ["null", "string"]
+        }
+      }
+    },
+    "marked_email_as_spam": {
+      "type": ["null", "boolean"]
+    },
+    "name": {
+      "type": ["null", "string"]
+    },
+    "phone": {
+      "type": ["null", "string"]
+    },
+    "pseudonym": {
+      "type": ["null", "string"]
+    },
+    "referrer": {
+      "type": ["null", "string"]
+    },
+    "remote_created_at": {
+      "type": ["null", "string"],
+      "format": "date-time"
+    },
+    "segments": {
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "type": ["null", "object"],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": ["null", "string"]
+              }
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "session_count": {
+      "type": ["null", "integer"]
+    },
+    "signed_up_at": {
+      "type": ["null", "string"],
+      "format": "date-time"
+    },
+    "social_profiles": {
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "type": ["null", "object"],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": ["null", "string"]
+              },
+              "name": {
+                "type": ["null", "string"]
+              },
+              "url": {
+                "type": ["null", "string"]
+              },
+              "username": {
+                "type": ["null", "string"]
+              }
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "tags": {
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "type": ["null", "object"],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": ["null", "integer"]
+              }
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "type": {
+      "type": ["null", "string"]
+    },
+    "unsubscribed_from_emails": {
+      "type": ["null", "boolean"]
+    },
+    "updated_at": {
+      "type": ["null", "string"],
+      "format": "date-time"
+    },
+    "user_id": {
+      "type": ["null", "string"]
+    },
+    "utm_campaign": {
+      "type": ["null", "string"]
+    },
+    "utm_content": {
+      "type": ["null", "string"]
+    },
+    "utm_medium": {
+      "type": ["null", "string"]
+    },
+    "utm_source": {
+      "type": ["null", "string"]
+    },
+    "utm_term": {
+      "type": ["null", "string"]
+    }
+  }
+}
