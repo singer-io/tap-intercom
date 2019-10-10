@@ -6,14 +6,15 @@
       "type": ["null", "string"]
     },
     "attachments": {
-      "type": "array"
+      "type": ["null", "array"],
+      "items": {}
     },
     "author": {
       "type": ["null", "object"],
       "additionalProperties": false,
       "properties": {
         "id": {
-          "type": ["null", "integer"]
+          "type": ["null", "string"]
         },
         "type": {
           "type": ["null", "string"]

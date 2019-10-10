@@ -71,8 +71,7 @@ reference#list-customer-data-attributes)
 - Endpoint: https://api.intercom.io/conversations/{conversation_id}
 - Primary key fields: id
 - Foreign key fields: conversation_id, author > id
-- Replication strategy: INCREMENTAL (query all, filter results)
-  - Bookmark: updated_at (date-time)
+- Replication strategy: FULL_TABLE (ALL for each changed parent Conversation)
 - Transformations: Conversation parts with parent conversation_id
 
 [customer_attributes](https://developers.intercom.com/intercom-api-reference/reference#list-customer-data-attributes)

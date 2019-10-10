@@ -11,7 +11,7 @@
 #   data_key: JSON element containing the results list for the endpoint; default = 'results'
 #   bookmark_query_field: From date-time field used for filtering the query
 #   bookmark_type: Data type for bookmark, integer or datetime
-#   scroll_ind: True/False if endpoint may use scroll API for historical sync
+#   scroll_type: always, historical, or never; default never
 
 STREAMS = {
     'admins': {
@@ -23,13 +23,17 @@ STREAMS = {
         'replication_method': 'INCREMENTAL',
         'replication_keys': ['updated_at'],
         'bookmark_type': 'datetime',
-        'scroll_ind': True
+        'scroll_type': 'always',
+        'interpolate_page': False
     },
     'company_attributes': {
-        'path': 'data_attributes/company',
+        'path': 'data_attributes',
         'data_key': 'data_attributes',
         'key_properties': ['name'],
-        'replication_method': 'FULL_TABLE'
+        'replication_method': 'FULL_TABLE',
+        'params': {
+            'model': 'company'
+        }
     },
     'company_segments': {
         'path': 'segments',
@@ -38,31 +42,44 @@ STREAMS = {
         'replication_method': 'INCREMENTAL',
         'replication_keys': ['updated_at'],
         'bookmark_type': 'datetime',
+        'interpolate_page': False,
         'params': {
             'type': 'company',
             'include_count': 'true'
         }
     },
-    # 'conversations': {
-    #     'key_properties': ['id'],
-    #     'replication_method': 'INCREMENTAL',
-    #     'replication_keys': ['updated_at'],
-    #     'bookmark_type': 'datetime',
-    #     'children': {
-    #         'conversation_parts': {
-    #             'path': 'conversations/{}',
-    #             'key_properties': ['id'],
-    #             'replication_method': 'INCREMENTAL',
-    #             'replication_keys': ['updated_at'],
-    #             'bookmark_type': 'datetime'
-    #         }
-    #     }
-    # },
+    'conversations': {
+        'key_properties': ['id'],
+        'replication_method': 'INCREMENTAL',
+        'replication_keys': ['updated_at'],
+        'bookmark_type': 'datetime',
+        'interpolate_page': True,
+        'batch_size': 20,
+        'params': {
+            'sort': 'updated_at',
+            'order': 'asc',
+            'display_as': 'plaintext'
+        },
+        'children': {
+            'conversation_parts': {
+                'path': 'conversations/{}',
+                'data_key': 'conversations',
+                'key_properties': ['id'],
+                'replication_method': 'FULL_TABLE',
+                'params': {
+                    'display_as': 'plaintext'
+                }
+            }
+        }
+    },
     'customer_attributes': {
-        'path': 'data_attributes/customer',
+        'path': 'data_attributes',
         'data_key': 'data_attributes',
         'key_properties': ['name'],
-        'replication_method': 'FULL_TABLE'
+        'replication_method': 'FULL_TABLE',
+        'params': {
+            'model': 'customer'
+        }
     },
     'leads': {
         'path': 'contacts',
@@ -75,13 +92,15 @@ STREAMS = {
             'sort': 'updated_at',
             'order': 'asc'
         },
-        'scroll_ind': True
+        'scroll_type': 'historical',
+        'interpolate_page': True
     },
     'segments': {
         'key_properties': ['id'],
         'replication_method': 'INCREMENTAL',
         'replication_keys': ['updated_at'],
         'bookmark_type': 'datetime',
+        'interpolate_page': False,
         'params': {
             'include_count': 'true'
         }
@@ -104,11 +123,12 @@ STREAMS = {
             'sort': 'updated_at',
             'order': 'asc'
         },
-        'scroll_ind': True
+        'scroll_type': 'historical',
+        'interpolate_page': False
     }
 }
 
-
+# De-nest children nodes for Discovery mode
 def flatten_streams():
     flat_streams = {}
     # Loop through parents
