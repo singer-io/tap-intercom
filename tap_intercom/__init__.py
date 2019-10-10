@@ -12,7 +12,7 @@ from tap_intercom.sync import sync
 LOGGER = singer.get_logger()
 
 REQUIRED_CONFIG_KEYS = [
-    'token',
+    'access_token',
     'start_date',
     'user_agent'
 ]
@@ -30,7 +30,7 @@ def main():
 
     parsed_args = singer.utils.parse_args(REQUIRED_CONFIG_KEYS)
 
-    with IntercomClient(parsed_args.config['token'],
+    with IntercomClient(parsed_args.config['access_token'],
                         parsed_args.config['user_agent']) as client:
 
         state = {}

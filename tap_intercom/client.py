@@ -112,10 +112,10 @@ def raise_for_error(response):
                     error_message = err.get('message')
                     error_code = err.get('code')
                     ex = get_exception_for_error_code(status_code)
-                    if status_code == 401 and 'token' in error_code:
-                        LOGGER.error("Your API token is expired/invalid as per Intercom’s "\
+                    if status_code == 401 and 'access_token' in error_code:
+                        LOGGER.error("Your API access_token is expired/invalid as per Intercom’s "\
                             "security policy. \n Please re-authenticate your connection to "\
-                            "generate a new token and resume extraction.")
+                            "generate a new access_token and resume extraction.")
                     message = '{}: {}\n{}'.format(error_code, error_message, message)
                 raise ex('{}'.format(message))
             raise IntercomError(error)
@@ -127,17 +127,17 @@ class IntercomClient(object):
     rate_limit = 1000 # API calls per interval (for public app)
     rate_limit_interval = 60 # seconds
     def __init__(self,
-                 token,
+                 access_token,
                  user_agent=None):
-        self.__token = token
+        self.__access_token = access_token
         self.__user_agent = user_agent
-        # Rate limit initial values, reset by check_token headers
+        # Rate limit initial values, reset by check_access_token headers
         self.__session = requests.Session()
         self.__verified = False
         self.base_url = 'https://api.intercom.io'
 
     def __enter__(self):
-        self.__verified = self.check_token()
+        self.__verified = self.check_access_token()
         return self
 
     def __exit__(self, exception_type, exception_value, traceback):
@@ -147,16 +147,16 @@ class IntercomClient(object):
                           Server5xxError,
                           max_tries=5,
                           factor=2)
-    def check_token(self):
-        if self.__token is None:
+    def check_access_token(self):
+        if self.__access_token is None:
             raise Exception('Error: Missing access_token.')
         headers = {}
         if self.__user_agent:
             headers['User-Agent'] = self.__user_agent
-        headers['Authorization'] = 'Bearer {}'.format(self.__token)
+        headers['Authorization'] = 'Bearer {}'.format(self.__access_token)
         headers['Accept'] = 'application/json'
         response = self.__session.get(
-            # Simple endpoint that returns 1 Account record (to check API/token access):
+            # Simple endpoint that returns 1 Account record (to check API/access_token access):
             url='{}/{}'.format(self.base_url, 'tags'),
             headers=headers)
         if response.status_code != 200:
@@ -184,7 +184,7 @@ class IntercomClient(object):
     @utils.ratelimit(rate_limit, rate_limit_interval)
     def request(self, method, path=None, url=None, **kwargs):
         if not self.__verified:
-            self.__verified = self.check_token()
+            self.__verified = self.check_access_token()
 
         if not url and path:
             url = '{}/{}'.format(self.base_url, path)
@@ -197,7 +197,7 @@ class IntercomClient(object):
 
         if 'headers' not in kwargs:
             kwargs['headers'] = {}
-        kwargs['headers']['Authorization'] = 'Bearer {}'.format(self.__token)
+        kwargs['headers']['Authorization'] = 'Bearer {}'.format(self.__access_token)
         kwargs['headers']['Accept'] = 'application/json'
 
         if self.__user_agent:
