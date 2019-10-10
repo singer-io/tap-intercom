@@ -12,6 +12,7 @@
 #   bookmark_query_field: From date-time field used for filtering the query
 #   bookmark_type: Data type for bookmark, integer or datetime
 #   scroll_type: always, historical, or never; default never
+#   interpolate_page: True, False (to determine start page based on total pages and bookmark)
 
 STREAMS = {
     'admins': {

@@ -198,10 +198,8 @@ def sync_endpoint(client, #pylint: disable=too-many-branches
                     # Get next_page based on proportional ratio of time integers
                     pct_time = ((max_bookmark_int - first_record_updated_int)/(now_int - first_record_updated_int))
                     LOGGER.info('Interpolate percent based on time diff: {}%'.format(math.floor(pct_time * 100)))
-                    next_page = math.floor(pct_time * total_pages)
-                    min_page = math.floor(0.97 * next_page)
+                    next_page = math.floor(0.95 * pct_time * total_pages)
                     LOGGER.info('  next_oage = {}'.format(next_page))
-                    LOGGER.info('  min_oage = {}'.format(min_page))
                 elif first_record_updated_int <= max_bookmark_int and last_record_updated_int >= max_bookmark_int:
                     # First page found, stop looping
                     min_page = page
