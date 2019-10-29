@@ -20,6 +20,7 @@ setup(name='tap-intercom',
       packages=find_packages(),
       package_data={
           'tap_intercom': [
-              'schemas/*.json'
+              'schemas/*.json',
+              'tests/*.py'
           ]
       })

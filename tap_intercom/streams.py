@@ -11,8 +11,10 @@
 #   data_key: JSON element containing the results list for the endpoint; default = 'results'
 #   bookmark_query_field: From date-time field used for filtering the query
 #   bookmark_type: Data type for bookmark, integer or datetime
+#   batch_size: number of records requested per API call (per page); default: 60
 #   scroll_type: always, historical, or never; default never
 #   interpolate_page: True, False (to determine start page based on total pages and bookmark)
+#       default: False
 
 STREAMS = {
     'admins': {
@@ -24,8 +26,7 @@ STREAMS = {
         'replication_method': 'INCREMENTAL',
         'replication_keys': ['updated_at'],
         'bookmark_type': 'datetime',
-        'scroll_type': 'always',
-        'interpolate_page': False
+        'scroll_type': 'always'
     },
     'company_attributes': {
         'path': 'data_attributes',
@@ -43,7 +44,6 @@ STREAMS = {
         'replication_method': 'INCREMENTAL',
         'replication_keys': ['updated_at'],
         'bookmark_type': 'datetime',
-        'interpolate_page': False,
         'params': {
             'type': 'company',
             'include_count': 'true'
@@ -101,7 +101,6 @@ STREAMS = {
         'replication_method': 'INCREMENTAL',
         'replication_keys': ['updated_at'],
         'bookmark_type': 'datetime',
-        'interpolate_page': False,
         'params': {
             'include_count': 'true'
         }
@@ -124,8 +123,7 @@ STREAMS = {
             'sort': 'updated_at',
             'order': 'asc'
         },
-        'scroll_type': 'historical',
-        'interpolate_page': False
+        'scroll_type': 'historical'
     }
 }
 

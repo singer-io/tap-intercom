@@ -91,6 +91,8 @@ def process_records(catalog, #pylint: disable=too-many-branches
                     if max_bookmark_value is None or \
                         transformed_record[bookmark_field] > transform_datetime(max_bookmark_value):
                         max_bookmark_value = transformed_record[bookmark_field]
+                        LOGGER.info('{}, increase max_bookkmark_value: {}'.format(
+                            stream_name, max_bookmark_value))
 
                 if bookmark_field and (bookmark_field in transformed_record):
                     if bookmark_type == 'integer':
@@ -142,6 +144,7 @@ def sync_endpoint(client, #pylint: disable=too-many-branches
     else:
         last_datetime = get_bookmark(state, stream_name, start_date)
         max_bookmark_value = last_datetime
+        LOGGER.info('{}, initial max_bookmark_value {}'.format(stream_name, max_bookmark_value))
         max_bookmark_dttm = strptime_to_utc(last_datetime)
         max_bookmark_int = int(time.mktime(max_bookmark_dttm.timetuple()))
         now_int = int(time.time())
@@ -156,9 +159,15 @@ def sync_endpoint(client, #pylint: disable=too-many-branches
     total_records = 0
 
     # Check scroll_type to determine if to use Scroll API
+    #   scroll_types: always, historical, never.
+    #   Endpoints:
+    #       always: customers
+    #       historical: users, leads
+    #       never: all others
     # Scroll API: https://developers.intercom.io/reference?_ga=2.237132992.1579857338.1569387987-1032864292.1569297580#iterating-over-all-users
     scroll_type = endpoint_config.get('scroll_type', 'never')
-    interpolate_page = endpoint_config.get('interpolate_page', False)
+
+    # Scroll for always and historical re-syncs
     if scroll_type == 'always' or (scroll_type == 'historical' and max_bookmark_value[0:10] == start_date[0:10]):
         LOGGER.info('Stream: {}, Historical Sync, Using Scoll API'.format(stream_name))
         is_scrolling = True
@@ -167,6 +176,14 @@ def sync_endpoint(client, #pylint: disable=too-many-branches
     else:
         is_scrolling = False
         next_url = '{}/{}'.format(client.base_url, path)
+
+        # INTERPOLATE PAGE:
+        # Endpoints: conversations and leads
+        # Pre-requisites: Endpoint allows SORT ASC by bookmark and PAGING, but does not provide query filtering params. 
+        # Interpolate Page: Find start page based on sorting results, bookmark datetime, and binary search algorithm.
+        #    Algorithm tries to estimate start page based on bookmark, and then splits the difference if it
+        #       exceeds the start page or falls short of the start page based on the page's 1st and last record bookmarks.
+        interpolate_page = endpoint_config.get('interpolate_page', False)
         if interpolate_page:
             # Interpolate based on current page, total_pages, and updated_at to get first page
             min_page = 1
@@ -195,11 +212,16 @@ def sync_endpoint(client, #pylint: disable=too-many-branches
                 first_record_updated_int = data.get(data_key, [])[0].get('updated_at')
                 last_record_updated_int = data.get(data_key, [])[list_len - 1].get('updated_at')
                 if i == 1:
+                    # FIRST GUESS - based on TOTAL PAGES, last bookmark, and % of time difference: (bookmark - 1st Record) / (NOW - 1st Record)
                     # Get next_page based on proportional ratio of time integers
+                    #  If bookmark datetime in at 90% of (NOW - 1st Record) and there are 100 pages TOTAL, then try page 90
+                    #  NOTE: It is better for NEXT GUESSES to slightly under-shoot - so that splitting the difference is smaller. 
+                    #    If you start at 1, then over-shoot to 90, but the 1st Page is 89, the next_page guess will be 45.
+                    #    This is why next_page is 95% of pct_time x total_pages
                     pct_time = ((max_bookmark_int - first_record_updated_int)/(now_int - first_record_updated_int))
                     LOGGER.info('Interpolate percent based on time diff: {}%'.format(math.floor(pct_time * 100)))
-                    next_page = math.floor(0.95 * pct_time * total_pages)
-                    LOGGER.info('  next_oage = {}'.format(next_page))
+                    next_page = math.floor(0.95 * pct_time * total_pages)  # Adjust 1st GUESS to lower by 5% to under-shoot
+                    LOGGER.info('  next_page = {}'.format(next_page))
                 elif first_record_updated_int <= max_bookmark_int and last_record_updated_int >= max_bookmark_int:
                     # First page found, stop looping
                     min_page = page
@@ -226,6 +248,10 @@ def sync_endpoint(client, #pylint: disable=too-many-branches
                 'per_page': limit,
                 **static_params # adds in endpoint specific, sort, filter params
             }
+            # FINISH INTERPOLATION
+
+        # NORMAL SYNC - Not SCROLLING, Not INTERPOLATION
+        #   Standard INCREMENTAL or FULL TABLE
         else:
             params = {
                 'page': page,
@@ -260,14 +286,18 @@ def sync_endpoint(client, #pylint: disable=too-many-branches
             params=querystring,
             endpoint=stream_name)
 
+        # LOGGER.info('data = {}'.format(data)) # TESTING, comment out
+
         # time_extracted: datetime when the data was extracted from the API
         time_extracted = utils.now()
         if not data or data is None or data == {}:
             return total_records # No data results
 
         # Transform data with transform_json from transform.py
-        # The data_key identifies the array/list of records below the <root> element
-        # LOGGER.info('data = {}'.format(data)) # TESTING, comment out
+        # The data_key identifies the array/list of records below the <root> element.
+        # SINGLE RECORD data results appear as dictionary.
+        # MULTIPLE RECORD data results appear as an array-list under the data_key.
+        # The following code converts ALL results to an array-list and transforms data.
         transformed_data = [] # initialize the record list
         data_list = []
         data_dict = {}
@@ -313,7 +343,7 @@ def sync_endpoint(client, #pylint: disable=too-many-branches
         LOGGER.info('Stream {}, batch processed {} records'.format(
             stream_name, record_count))
 
-            # Loop thru parent batch records for each children objects (if should stream)
+        # Loop thru parent batch records for each children objects (if should stream)
         children = endpoint_config.get('children')
         if children:
             for child_stream_name, child_endpoint_config in children.items():
@@ -384,8 +414,8 @@ def sync_endpoint(client, #pylint: disable=too-many-branches
         else:
             next_url = data.get('pages', {}).get('next', None)
 
-        # Update the state with the max_bookmark_value for the stream
-        if bookmark_field:
+        # Update the state with the max_bookmark_value for non-scrolling
+        if bookmark_field and not is_scrolling:
             write_bookmark(state, stream_name, max_bookmark_value)
 
         # to_rec: to record; ending record for the batch page
@@ -405,6 +435,11 @@ def sync_endpoint(client, #pylint: disable=too-many-branches
         stream_name,
         page - 1,
         total_records))
+
+    # Update the state with the max_bookmark_value for non-scrolling
+    if bookmark_field and is_scrolling:
+        write_bookmark(state, stream_name, max_bookmark_value)
+
     return total_records
 
 

@@ -1,2 +1,3 @@
 include LICENSE
 include tap_intercom/schemas/*.json
+include tap_intercom/tests/*.py
