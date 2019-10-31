@@ -173,8 +173,7 @@ class IntercomClient(object):
             resp = response.json()
             if 'type' in resp:
                 return True
-            else:
-                return False
+            return False
 
 
     @backoff.on_exception(backoff.expo,

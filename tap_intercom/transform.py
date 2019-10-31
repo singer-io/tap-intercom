@@ -51,5 +51,4 @@ def transform_json(this_json, stream_name, data_key):
         new_json = denested_json
     if data_key in new_json:
         return new_json[data_key]
-    else:
-        return new_json
+    return new_json

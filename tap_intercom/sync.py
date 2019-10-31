@@ -1,7 +1,6 @@
 import time
 import math
 import singer
-import json
 from singer import metrics, metadata, Transformer, utils, UNIX_SECONDS_INTEGER_DATETIME_PARSING
 from singer.utils import strptime_to_utc
 from tap_intercom.transform import transform_json
@@ -179,7 +178,7 @@ def sync_endpoint(client, #pylint: disable=too-many-branches
 
         # INTERPOLATE PAGE:
         # Endpoints: conversations and leads
-        # Pre-requisites: Endpoint allows SORT ASC by bookmark and PAGING, but does not provide query filtering params. 
+        # Pre-requisites: Endpoint allows SORT ASC by bookmark and PAGING, but does not provide query filtering params.
         # Interpolate Page: Find start page based on sorting results, bookmark datetime, and binary search algorithm.
         #    Algorithm tries to estimate start page based on bookmark, and then splits the difference if it
         #       exceeds the start page or falls short of the start page based on the page's 1st and last record bookmarks.
@@ -215,7 +214,7 @@ def sync_endpoint(client, #pylint: disable=too-many-branches
                     # FIRST GUESS - based on TOTAL PAGES, last bookmark, and % of time difference: (bookmark - 1st Record) / (NOW - 1st Record)
                     # Get next_page based on proportional ratio of time integers
                     #  If bookmark datetime in at 90% of (NOW - 1st Record) and there are 100 pages TOTAL, then try page 90
-                    #  NOTE: It is better for NEXT GUESSES to slightly under-shoot - so that splitting the difference is smaller. 
+                    #  NOTE: It is better for NEXT GUESSES to slightly under-shoot - so that splitting the difference is smaller.
                     #    If you start at 1, then over-shoot to 90, but the 1st Page is 89, the next_page guess will be 45.
                     #    This is why next_page is 95% of pct_time x total_pages
                     pct_time = ((max_bookmark_int - first_record_updated_int)/(now_int - first_record_updated_int))
@@ -462,9 +461,9 @@ def get_selected_fields(catalog, stream_name):
     mdata_list = singer.metadata.to_list(mdata)
     selected_fields = []
     for entry in mdata_list:
-        field =  None
+        field = None
         try:
-            field =  entry['breadcrumb'][1]
+            field = entry['breadcrumb'][1]
             if entry.get('metadata', {}).get('selected', False):
                 selected_fields.append(field)
         except IndexError:
