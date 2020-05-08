@@ -234,16 +234,18 @@ reference#list-customer-data-attributes)
     +---------------------+---------+---------+
     | stream              | records | schemas |
     +---------------------+---------+---------+
-    | company_attributes  | 20      | 1       |
-    | customer_attributes | 41      | 1       |
-    | admins              | 3       | 1       |
-    | users               | 5       | 1       |
+    | admins              | 12      | 1       |
+    | company_attributes  | 226     | 1       |
+    | customer_attributes | 61      | 1       |
     | segments            | 5       | 1       |
-    | tags                | 7       | 1       |
-    | companies           | 3       | 1       |
-    | company_segments    | 4       | 1       |
-    | leads               | 4       | 1       |
-    | teams               | 0       | 1       |
+    | teams               | 5       | 1       |
+    | tags                | 404     | 1       |
+    | company_segments    | 3       | 1       |
+    | conversations       | 2284    | 1       |
+    | conversation_parts  | 52610   | 48      |
+    | leads               | 480     | 1       |
+    | users               | 6231    | 1       |
+    | companies           | 7182    | 1       |
     +---------------------+---------+---------+
     ```
 ---

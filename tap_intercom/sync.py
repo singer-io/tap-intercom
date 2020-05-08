@@ -4,7 +4,7 @@ import singer
 from singer import metrics, metadata, Transformer, utils, UNIX_SECONDS_INTEGER_DATETIME_PARSING
 from singer.utils import strptime_to_utc
 from tap_intercom.transform import transform_json
-from tap_intercom.streams import STREAMS
+from tap_intercom.streams import STREAMS, flatten_streams
 
 LOGGER = singer.get_logger()
 
@@ -81,17 +81,21 @@ def process_records(catalog, #pylint: disable=too-many-branches
             # Transform record for Singer.io
             with Transformer(integer_datetime_fmt=UNIX_SECONDS_INTEGER_DATETIME_PARSING) \
                 as transformer:
-                transformed_record = transformer.transform(
-                    record,
-                    schema,
-                    stream_metadata)
+                try:
+                    transformed_record = transformer.transform(
+                        record,
+                        schema,
+                        stream_metadata)
+                except Exception as err:
+                    LOGGER.error('Transformer Error: {}'.format(err))
+                    LOGGER.error('Stream: {}, record: {}'.format(stream_name, record))
+                    raise RuntimeError(err)
                 # Reset max_bookmark_value to new value if higher
                 if transformed_record.get(bookmark_field):
                     if max_bookmark_value is None or \
                         transformed_record[bookmark_field] > transform_datetime(max_bookmark_value):
                         max_bookmark_value = transformed_record[bookmark_field]
-                        LOGGER.info('{}, increase max_bookkmark_value: {}'.format(
-                            stream_name, max_bookmark_value))
+                        # LOGGER.info('{}, increase max_bookkmark_value: {}'.format(stream_name, max_bookmark_value))
 
                 if bookmark_field and (bookmark_field in transformed_record):
                     if bookmark_type == 'integer':
@@ -130,6 +134,7 @@ def sync_endpoint(client, #pylint: disable=too-many-branches
                   data_key=None,
                   id_fields=None,
                   selected_streams=None,
+                  replication_ind=None,
                   parent=None,
                   parent_id=None):
 
@@ -161,7 +166,7 @@ def sync_endpoint(client, #pylint: disable=too-many-branches
     #   scroll_types: always, historical, never.
     #   Endpoints:
     #       always: customers
-    #       historical: users, leads
+    #       historical: users, leads (contacts)
     #       never: all others
     # Scroll API: https://developers.intercom.io/reference?_ga=2.237132992.1579857338.1569387987-1032864292.1569297580#iterating-over-all-users
     scroll_type = endpoint_config.get('scroll_type', 'never')
@@ -290,7 +295,7 @@ def sync_endpoint(client, #pylint: disable=too-many-branches
         # time_extracted: datetime when the data was extracted from the API
         time_extracted = utils.now()
         if not data or data is None or data == {}:
-            return total_records # No data results
+            break # No data results
 
         # Transform data with transform_json from transform.py
         # The data_key identifies the array/list of records below the <root> element.
@@ -315,7 +320,7 @@ def sync_endpoint(client, #pylint: disable=too-many-branches
             if parent_id is None:
                 LOGGER.info('Stream: {}, No transformed data for data = {}'.format(
                     stream_name, data))
-            return total_records # No data results
+            break # No data results
         # Verify key id_fields are present
         rec_count = 0
         for record in transformed_data:
@@ -327,80 +332,86 @@ def sync_endpoint(client, #pylint: disable=too-many-branches
             rec_count = rec_count + 1
 
         # Process records and get the max_bookmark_value and record_count for the set of records
-        max_bookmark_value, record_count = process_records(
-            catalog=catalog,
-            stream_name=stream_name,
-            records=transformed_data,
-            time_extracted=time_extracted,
-            bookmark_field=bookmark_field,
-            bookmark_type=bookmark_type,
-            max_bookmark_value=max_bookmark_value,
-            last_datetime=last_datetime,
-            last_integer=last_integer,
-            parent=parent,
-            parent_id=parent_id)
-        LOGGER.info('Stream {}, batch processed {} records'.format(
-            stream_name, record_count))
+        if replication_ind:
+            max_bookmark_value, record_count = process_records(
+                catalog=catalog,
+                stream_name=stream_name,
+                records=transformed_data,
+                time_extracted=time_extracted,
+                bookmark_field=bookmark_field,
+                bookmark_type=bookmark_type,
+                max_bookmark_value=max_bookmark_value,
+                last_datetime=last_datetime,
+                last_integer=last_integer,
+                parent=parent,
+                parent_id=parent_id)
+            LOGGER.info('Stream {}, batch processed {} records'.format(
+                stream_name, record_count))
+        else:
+            record_count = 0
 
         # Loop thru parent batch records for each children objects (if should stream)
         children = endpoint_config.get('children')
         if children:
             for child_stream_name, child_endpoint_config in children.items():
                 if child_stream_name in selected_streams:
-                    write_schema(catalog, child_stream_name)
-                    child_selected_fields = get_selected_fields(catalog, child_stream_name)
-                    LOGGER.info('Stream: {}, selected_fields: {}'.format(
-                        child_stream_name, child_selected_fields))
-                    total_child_records = 0
-                    # For each parent record
-                    for record in transformed_data:
-                        i = 0
-                        # Set parent_id
-                        for id_field in id_fields:
-                            if i == 0:
-                                parent_id_field = id_field
-                            if id_field == 'id':
-                                parent_id_field = id_field
-                            i = i + 1
-                        parent_id = record.get(parent_id_field)
+                    child_replication_ind = child_endpoint_config.get('replication_ind', True)
+                    if child_replication_ind:
+                        write_schema(catalog, child_stream_name)
+                        child_selected_fields = get_selected_fields(catalog, child_stream_name)
+                        LOGGER.info('Stream: {}, selected_fields: {}'.format(
+                            child_stream_name, child_selected_fields))
+                        total_child_records = 0
+                        # For each parent record
+                        for record in transformed_data:
+                            i = 0
+                            # Set parent_id
+                            for id_field in id_fields:
+                                if i == 0:
+                                    parent_id_field = id_field
+                                if id_field == 'id':
+                                    parent_id_field = id_field
+                                i = i + 1
+                            parent_id = record.get(parent_id_field)
 
-                        # sync_endpoint for child
-                        LOGGER.info('Syncing: {}, parent_stream: {}, parent_id: {}'.format(
+                            # sync_endpoint for child
+                            LOGGER.info('Syncing: {}, parent_stream: {}, parent_id: {}'.format(
+                                child_stream_name,
+                                stream_name,
+                                parent_id))
+                            child_path = child_endpoint_config.get('path', child_stream_name).format(
+                                str(parent_id))
+                            child_bookmark_field = next(iter(child_endpoint_config.get(
+                                'replication_keys', [])), None)
+                            child_total_records = sync_endpoint(
+                                client=client,
+                                catalog=catalog,
+                                state=state,
+                                start_date=start_date,
+                                stream_name=child_stream_name,
+                                path=child_path,
+                                endpoint_config=child_endpoint_config,
+                                static_params=child_endpoint_config.get('params', {}),
+                                bookmark_query_field=child_endpoint_config.get(
+                                    'bookmark_query_field', None),
+                                bookmark_field=child_bookmark_field,
+                                bookmark_type=child_endpoint_config.get('bookmark_type', None),
+                                data_key=child_endpoint_config.get('data_key', child_stream_name),
+                                id_fields=child_endpoint_config.get('key_properties'),
+                                selected_streams=selected_streams,
+                                replication_ind=child_replication_ind,
+                                parent=child_endpoint_config.get('parent'),
+                                parent_id=parent_id)
+                            LOGGER.info('Synced: {}, parent_id: {}, records: {}'.format(
+                                child_stream_name,
+                                parent_id,
+                                child_total_records))
+                            total_child_records = total_child_records + child_total_records
+                        LOGGER.info('Parent Stream: {}, Child Stream: {}, FINISHED PARENT BATCH'.format(
+                            stream_name, child_stream_name))
+                        LOGGER.info('Synced: {}, total_records: {}'.format(
                             child_stream_name,
-                            stream_name,
-                            parent_id))
-                        child_path = child_endpoint_config.get('path', child_stream_name).format(
-                            str(parent_id))
-                        child_bookmark_field = next(iter(child_endpoint_config.get(
-                            'replication_keys', [])), None)
-                        child_total_records = sync_endpoint(
-                            client=client,
-                            catalog=catalog,
-                            state=state,
-                            start_date=start_date,
-                            stream_name=child_stream_name,
-                            path=child_path,
-                            endpoint_config=child_endpoint_config,
-                            static_params=child_endpoint_config.get('params', {}),
-                            bookmark_query_field=child_endpoint_config.get(
-                                'bookmark_query_field', None),
-                            bookmark_field=child_bookmark_field,
-                            bookmark_type=child_endpoint_config.get('bookmark_type', None),
-                            data_key=child_endpoint_config.get('data_key', child_stream_name),
-                            id_fields=child_endpoint_config.get('key_properties'),
-                            selected_streams=selected_streams,
-                            parent=child_endpoint_config.get('parent'),
-                            parent_id=parent_id)
-                        LOGGER.info('Synced: {}, parent_id: {}, records: {}'.format(
-                            child_stream_name,
-                            parent_id,
-                            child_total_records))
-                        total_child_records = total_child_records + child_total_records
-                    LOGGER.info('Parent Stream: {}, Child Stream: {}, FINISHED PARENT BATCH'.format(
-                        stream_name, child_stream_name))
-                    LOGGER.info('Synced: {}, total_records: {}'.format(
-                        child_stream_name,
-                        total_child_records))
+                            total_child_records))
 
         # set total_records and next_url for pagination
         total_records = total_records + record_count
@@ -408,7 +419,7 @@ def sync_endpoint(client, #pylint: disable=too-many-branches
         if is_scrolling:
             scroll_param = data.get('scroll_param')
             if not scroll_param:
-                return total_records
+                break
             next_url = '{}/{}/scroll?scroll_param={}'.format(client.base_url, path, scroll_param)
         else:
             next_url = data.get('pages', {}).get('next', None)
@@ -479,8 +490,15 @@ def sync(client, config, catalog, state):
     last_stream = singer.get_currently_syncing(state)
     LOGGER.info('last/currently syncing stream: {}'.format(last_stream))
     selected_streams = []
+
+    flat_streams = flatten_streams()
+
     for stream in catalog.get_selected_streams(state):
         selected_streams.append(stream.stream)
+        parent_stream = flat_streams.get(stream.stream, {}).get('parent_stream')
+        if parent_stream:
+            if parent_stream not in selected_streams:
+                selected_streams.append(parent_stream)
     LOGGER.info('selected_streams: {}'.format(selected_streams))
 
     if not selected_streams:
@@ -490,12 +508,16 @@ def sync(client, config, catalog, state):
     for stream_name, endpoint_config in STREAMS.items():
         if stream_name in selected_streams:
             LOGGER.info('START Syncing: {}'.format(stream_name))
-            selected_fields = get_selected_fields(catalog, stream_name)
-            LOGGER.info('Stream: {}, selected_fields: {}'.format(stream_name, selected_fields))
             update_currently_syncing(state, stream_name)
             path = endpoint_config.get('path', stream_name)
             bookmark_field = next(iter(endpoint_config.get('replication_keys', [])), None)
-            write_schema(catalog, stream_name)
+            replication_ind = endpoint_config.get('replication_ind', True)
+            if replication_ind:
+                selected_fields = get_selected_fields(catalog, stream_name)
+                LOGGER.info('Stream: {}, selected_fields: {}'.format(stream_name, selected_fields))
+                write_schema(catalog, stream_name)
+            else:
+                selected_fields = None
             total_records = sync_endpoint(
                 client=client,
                 catalog=catalog,
@@ -510,7 +532,8 @@ def sync(client, config, catalog, state):
                 bookmark_type=endpoint_config.get('bookmark_type', None),
                 data_key=endpoint_config.get('data_key', stream_name),
                 id_fields=endpoint_config.get('key_properties'),
-                selected_streams=selected_streams)
+                selected_streams=selected_streams,
+                replication_ind=replication_ind)
 
             update_currently_syncing(state, None)
             LOGGER.info('FINISHED Syncing: {}, total_records: {}'.format(

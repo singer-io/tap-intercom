@@ -15,6 +15,15 @@
         }
       ]
     },
+    "avatar": {
+      "type": ["null", "object"],
+      "additionalProperties": false,
+      "properties": {
+        "image_url": {
+          "type": ["null", "string"]
+        }
+      }
+    },
     "away_mode_enabled": {
       "type": ["null", "boolean"]
     },

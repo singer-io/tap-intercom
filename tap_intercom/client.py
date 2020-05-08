@@ -7,6 +7,8 @@ import singer
 
 LOGGER = singer.get_logger()
 
+API_VERSION = '1.4'
+
 
 class Server5xxError(Exception):
     pass
@@ -154,6 +156,7 @@ class IntercomClient(object):
             headers['User-Agent'] = self.__user_agent
         headers['Authorization'] = 'Bearer {}'.format(self.__access_token)
         headers['Accept'] = 'application/json'
+        headers['Intercom-Version'] = API_VERSION
         response = self.__session.get(
             # Simple endpoint that returns 1 Account record (to check API/access_token access):
             url='{}/{}'.format(self.base_url, 'tags'),
@@ -192,6 +195,7 @@ class IntercomClient(object):
             kwargs['headers'] = {}
         kwargs['headers']['Authorization'] = 'Bearer {}'.format(self.__access_token)
         kwargs['headers']['Accept'] = 'application/json'
+        kwargs['headers']['Intercom-Version'] = API_VERSION
 
         if self.__user_agent:
             kwargs['headers']['User-Agent'] = self.__user_agent
