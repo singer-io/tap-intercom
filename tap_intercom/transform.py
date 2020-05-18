@@ -8,7 +8,7 @@ def denest_list_nodes(this_json, data_key, list_nodes):
             if not this_node == []:
                 new_json[data_key][i][list_node] = this_node
             else:
-                new_json[data_key][i].pop(list_node)
+                new_json[data_key][i].pop(list_node, None)
         i = i + 1
     return new_json
 
@@ -34,7 +34,7 @@ def transform_conversation_parts(this_json, data_key):
 # Run other transforms, as needed: denest_list_nodes, transform_conversation_parts
 def transform_json(this_json, stream_name, data_key):
     new_json = this_json
-    if stream_name in ('users', 'leads'):
+    if stream_name in ('users', 'leads'): # change 'leads' to 'contacts' for API v.2.0
         list_nodes = ['companies', 'segments', 'social_profiles', 'tags']
         denested_json = denest_list_nodes(new_json, data_key, list_nodes)
         new_json = denested_json
@@ -43,7 +43,7 @@ def transform_json(this_json, stream_name, data_key):
         denested_json = denest_list_nodes(new_json, data_key, list_nodes)
         new_json = denested_json
     elif stream_name == 'conversations':
-        list_nodes = ['tags']
+        list_nodes = ['tags', 'contacts']
         denested_json = denest_list_nodes(new_json, data_key, list_nodes)
         new_json = denested_json
     elif stream_name == 'conversation_parts':

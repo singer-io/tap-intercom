@@ -30,6 +30,9 @@
     "label": {
       "type": ["null", "string"]
     },
+    "model": {
+      "type": ["null", "string"]
+    },
     "name": {
       "type": ["null", "string"]
     },
