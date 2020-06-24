@@ -163,16 +163,19 @@ def sync_endpoint(client, #pylint: disable=too-many-branches
     total_records = 0
 
     # Check scroll_type to determine if to use Scroll API
-    #   scroll_types: always, historical, never.
+    #   scroll_types: always, never.
     #   Endpoints:
     #       always: customers
-    #       historical: users, leads (contacts)
     #       never: all others
     # Scroll API: https://developers.intercom.io/reference?_ga=2.237132992.1579857338.1569387987-1032864292.1569297580#iterating-over-all-users
     scroll_type = endpoint_config.get('scroll_type', 'never')
 
-    # Scroll for always and historical re-syncs
-    if scroll_type == 'always' or (scroll_type == 'historical' and max_bookmark_value[0:10] == start_date[0:10]):
+    # Check whether the endpoint supports a cursor
+    # https://developers.intercom.com/intercom-api-reference/reference#pagination-cursor
+    cursor = endpoint_config.get('cursor', False)
+
+    # Scroll for always re-syncs
+    if scroll_type == 'always':
         LOGGER.info('Stream: {}, Historical Sync, Using Scoll API'.format(stream_name))
         is_scrolling = True
         next_url = '{}/{}/scroll'.format(client.base_url, path)
@@ -253,7 +256,11 @@ def sync_endpoint(client, #pylint: disable=too-many-branches
                 **static_params # adds in endpoint specific, sort, filter params
             }
             # FINISH INTERPOLATION
-
+        elif cursor:
+            params = {
+                'per_page': limit,
+                **static_params
+            }
         # NORMAL SYNC - Not SCROLLING, Not INTERPOLATION
         #   Standard INCREMENTAL or FULL TABLE
         else:
@@ -421,6 +428,10 @@ def sync_endpoint(client, #pylint: disable=too-many-branches
             if not scroll_param:
                 break
             next_url = '{}/{}/scroll?scroll_param={}'.format(client.base_url, path, scroll_param)
+        elif cursor:
+            pagination = data.get('pages', {}).get('next', {})
+            starting_after = pagination.get('starting_after', None)
+            next_url = '{}/{}?starting_after={}'.format(client.base_url, path, starting_after)
         else:
             next_url = data.get('pages', {}).get('next', None)
 

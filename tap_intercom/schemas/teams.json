@@ -16,7 +16,7 @@
       ]
     },
     "id": {
-      "type": ["null", "integer"]
+      "type": ["null", "string"]
     },
     "name": {
       "type": ["null", "string"]

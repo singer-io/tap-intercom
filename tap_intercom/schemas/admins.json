@@ -37,7 +37,7 @@
       "type": ["null", "boolean"]
     },
     "id": {
-      "type": ["null", "integer"]
+      "type": ["null", "string"]
     },
     "job_title": {
       "type": ["null", "string"]
