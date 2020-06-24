@@ -1,4 +1,3 @@
-import time
 import backoff
 import requests
 from requests.exceptions import ConnectionError
@@ -168,8 +167,7 @@ class IntercomClient(object):
             resp = response.json()
             if 'type' in resp:
                 return True
-            else:
-                return False
+            return False
 
     # Rate limiting:
     #  https://developers.intercom.com/intercom-api-reference/reference#rate-limiting
