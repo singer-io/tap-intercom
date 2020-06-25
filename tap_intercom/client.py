@@ -1,4 +1,3 @@
-import time
 import backoff
 import requests
 from requests.exceptions import ConnectionError
@@ -7,7 +6,7 @@ import singer
 
 LOGGER = singer.get_logger()
 
-API_VERSION = '1.4'
+API_VERSION = '2.0'
 
 
 class Server5xxError(Exception):
@@ -168,8 +167,7 @@ class IntercomClient(object):
             resp = response.json()
             if 'type' in resp:
                 return True
-            else:
-                return False
+            return False
 
     # Rate limiting:
     #  https://developers.intercom.com/intercom-api-reference/reference#rate-limiting

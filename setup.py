@@ -23,4 +23,12 @@ setup(name='tap-intercom',
               'schemas/*.json',
               'tests/*.py'
           ]
-      })
+      },
+      extras_require={
+          'dev': [
+              'pylint',
+              'ipdb',
+              'nose',
+          ]
+      }
+      )

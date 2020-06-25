@@ -22,10 +22,10 @@ STREAMS = {
         'data_key': 'admins',
         'key_properties': ['id'],
         'replication_method': 'FULL_TABLE',
-        'replication_ind': False, # DO NOT REPLICATE PARENT
+        'replication_ind': False,  # DO NOT REPLICATE PARENT
         'children': {
             'admins': {
-                'path': 'admins/{}', # ONLY REPLICATE CHILD (admin details)
+                'path': 'admins/{}',  # ONLY REPLICATE CHILD (admin details)
                 'key_properties': ['id'],
                 'replication_method': 'FULL_TABLE'
             }
@@ -36,11 +36,12 @@ STREAMS = {
         'replication_method': 'INCREMENTAL',
         'replication_keys': ['updated_at'],
         'bookmark_type': 'datetime',
-        'scroll_type': 'always'
+        'scroll_type': 'always',
+        'data_key': 'data'
     },
     'company_attributes': {
         'path': 'data_attributes',
-        'data_key': 'data_attributes', # change to `data` in API v.2.0
+        'data_key': 'data',  # change to `data` in API v.2.0
         'key_properties': ['name'],
         'replication_method': 'FULL_TABLE',
         'params': {
@@ -83,51 +84,25 @@ STREAMS = {
             }
         }
     },
-    # 'contact_attributes': {
-    #     'path': 'data_attributes',
-    #     'data_key': 'data',
-    #     'key_properties': ['name'],
-    #     'replication_method': 'FULL_TABLE',
-    #     'params': {
-    #         'model': 'contact'
-    #     }
-    # },
-    # 'contacts': {
-    #     'path': 'contacts',
-    #     'data_key': 'contacts',
-    #     'key_properties': ['id'],
-    #     'replication_method': 'INCREMENTAL',
-    #     'replication_keys': ['updated_at'],
-    #     'bookmark_type': 'datetime',
-    #     'params': {
-    #         'sort': 'updated_at',
-    #         'order': 'asc'
-    #     },
-    #     'scroll_type': 'historical',
-    #     'interpolate_page': True
-    # },
-     'customer_attributes': { # becomes 'contact_attributes' in API v.2.0
+    'contact_attributes': {
         'path': 'data_attributes',
-        'data_key': 'data_attributes', # change to 'data' in API v.2.0
+        'data_key': 'data',
         'key_properties': ['name'],
         'replication_method': 'FULL_TABLE',
         'params': {
-            'model': 'customer' # becomes 'contact' in API v.2.0
+            'model': 'contact'
         }
     },
-    'leads': {
+    'contacts': {
         'path': 'contacts',
-        'data_key': 'contacts',
+        'data_key': 'data',
         'key_properties': ['id'],
         'replication_method': 'INCREMENTAL',
         'replication_keys': ['updated_at'],
         'bookmark_type': 'datetime',
-        'params': {
-            'sort': 'updated_at',
-            'order': 'asc'
-        },
-        'scroll_type': 'historical',
-        'interpolate_page': True
+        'batch_size': 150,
+        # V2 APIs are starting to adopt a cursor-based approach to pagination
+        'cursor': True
     },
     'segments': {
         'key_properties': ['id'],
@@ -140,25 +115,15 @@ STREAMS = {
     },
     'tags': {
         'key_properties': ['id'],
-        'replication_method': 'FULL_TABLE'
+        'replication_method': 'FULL_TABLE',
+        'data_key': 'data'
     },
     'teams': {
         'key_properties': ['id'],
         'replication_method': 'FULL_TABLE'
     },
-    'users': {
-        'key_properties': ['id'],
-        'replication_method': 'INCREMENTAL',
-        'replication_keys': ['updated_at'],
-        'bookmark_query_field': 'updated_since',
-        'bookmark_type': 'datetime',
-        'params': {
-            'sort': 'updated_at',
-            'order': 'asc'
-        },
-        'scroll_type': 'historical'
-    }
 }
+
 
 # De-nest children nodes for Discovery mode
 def flatten_streams():
