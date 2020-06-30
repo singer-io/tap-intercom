@@ -534,11 +534,164 @@
       ],
       "format": "date-time"
     },
+    "sla_applied": {
+      "type": [
+        "null",
+        "object"
+      ],
+      "additionalProperties": false,
+          "properties": {
+            "sla_name": {
+              "type": [
+                "null",
+                "string"
+           ]
+          },
+            "sla_status": {
+              "type": [
+                "null",
+                "string"
+          ]
+          }
+        }
+      },
     "state": {
       "type": [
         "null",
         "string"
       ]
+    },
+    "statistics": {
+      "type": [
+        "null",
+        "object"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "time_to_assignment": {
+          "type": [
+            "null",
+            "integer"
+          ]
+        },
+        "time_to_admin_reply": {
+          "type": [
+            "null",
+            "integer"
+          ]
+        },
+        "time_to_first_close": {
+          "type": [
+            "null",
+            "integer"
+          ]
+        },
+        "time_to_last_close": {
+          "type": [
+            "null",
+            "integer"
+          ]
+        },
+        "median_time_to_reply": {
+          "type": [
+            "null",
+            "integer"
+          ]
+        },
+        "first_contact_reply_at": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "format": "date-time"
+        },
+        "first_assignment_at": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "format": "date-time"
+        },
+        "first_admin_reply_at": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "format": "date-time"
+        },
+        "first_close_at": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "format": "date-time"
+        },
+        "last_assignment_at": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "format": "date-time"
+        },
+        "last_assignment_admin_reply_at": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "format": "date-time"
+        },
+        "last_contact_reply_at": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "format": "date-time"
+        },
+        "last_admin_reply_at": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "format": "date-time"
+        },
+        "last_close_at": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "format": "date-time"
+        },
+        "last_closed_by_id": {
+          "type": [
+            "null",
+            "integer"
+          ]
+        },
+        "count_reopens": {
+          "type": [
+            "null",
+            "integer"
+          ]
+        },
+        "count_assignments": {
+          "type": [
+            "null",
+            "integer"
+          ]
+        },
+        "count_conversation_parts": {
+          "type": [
+            "null",
+            "integer"
+          ]
+        }
+      }
     },
     "tags": {
       "type": [
