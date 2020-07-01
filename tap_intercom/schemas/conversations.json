@@ -539,7 +539,6 @@
         "null",
         "object"
       ],
-      "additionalProperties": false,
           "properties": {
             "sla_name": {
               "type": [
@@ -566,7 +565,6 @@
         "null",
         "object"
       ],
-      "additionalProperties": false,
       "properties": {
         "type": {
           "type": [
