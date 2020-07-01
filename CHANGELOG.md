@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.1.0
+  * Add `sla_applied` and `statistics` objects.
+
 ## 0.0.4
   * Adjust `client.py` to use API `v.2.0`.
   * Remove `users` and `leads` streams.
