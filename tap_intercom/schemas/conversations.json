@@ -539,21 +539,21 @@
         "null",
         "object"
       ],
-          "properties": {
-            "sla_name": {
-              "type": [
-                "null",
-                "string"
-           ]
-          },
-            "sla_status": {
-              "type": [
-                "null",
-                "string"
+      "properties": {
+        "sla_name": {
+          "type": [
+            "null",
+            "string"
           ]
-          }
+        },
+        "sla_status": {
+          "type": [
+            "null",
+            "string"
+          ]
         }
-      },
+      }
+    },
     "state": {
       "type": [
         "null",
