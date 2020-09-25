@@ -431,7 +431,9 @@ def sync_endpoint(client, #pylint: disable=too-many-branches
         elif cursor:
             pagination = data.get('pages', {}).get('next', {})
             starting_after = pagination.get('starting_after', None)
-            next_url = '{}/{}?starting_after={}'.format(client.base_url, path, starting_after)
+            if starting_after is None:
+                break
+            next_url = '{}/{}?starting_after={}&per_page={}'.format(client.base_url, path, starting_after, limit)
         else:
             next_url = data.get('pages', {}).get('next', None)
 
