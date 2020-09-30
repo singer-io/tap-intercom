@@ -89,7 +89,7 @@ def process_records(catalog, #pylint: disable=too-many-branches
                 except Exception as err:
                     LOGGER.error('Transformer Error: {}'.format(err))
                     LOGGER.error('Stream: {}, record: {}'.format(stream_name, record))
-                    raise RuntimeError(err)
+                    raise
                 # Reset max_bookmark_value to new value if higher
                 if transformed_record.get(bookmark_field):
                     if max_bookmark_value is None or \
