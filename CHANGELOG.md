@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.0.0
+  * Bumping to first major version 1.0.0 for GA Release
+
 ## 0.1.0
   * Add `sla_applied` and `statistics` objects.
 

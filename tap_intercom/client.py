@@ -118,10 +118,10 @@ def raise_for_error(response):
                             "security policy. \n Please re-authenticate your connection to "\
                             "generate a new access_token and resume extraction.")
                     message = '{}: {}\n{}'.format(error_code, error_message, message)
-                raise ex('{}'.format(message))
-            raise IntercomError(error)
-        except (ValueError, TypeError):
-            raise IntercomError(error)
+                raise ex('{}'.format(message)) from error
+            raise IntercomError(error) from error
+        except (ValueError, TypeError) as inner_error:
+            raise IntercomError(error) from inner_error
 
 
 class IntercomClient(object):
