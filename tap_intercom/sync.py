@@ -1,7 +1,7 @@
 import time
 import math
 import singer
-from singer import metrics, metadata, Transformer, utils, UNIX_SECONDS_INTEGER_DATETIME_PARSING
+from singer import metrics, metadata, Transformer, utils, UNIX_SECONDS_INTEGER_DATETIME_PARSING, UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING
 from singer.utils import strptime_to_utc
 from tap_intercom.transform import transform_json
 from tap_intercom.streams import STREAMS, flatten_streams
@@ -73,48 +73,54 @@ def process_records(catalog, #pylint: disable=too-many-branches
     stream_metadata = metadata.to_map(stream.metadata)
 
     with metrics.record_counter(stream_name) as counter:
+        seconds_transformer = Transformer(integer_datetime_fmt=UNIX_SECONDS_INTEGER_DATETIME_PARSING)
+        milliseconds_transformer = Transformer(integer_datetime_fmt=UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING)
         for record in records:
             # If child object, add parent_id to record
             if parent_id and parent:
                 record[parent + '_id'] = parent_id
 
-            # Transform record for Singer.io
-            with Transformer(integer_datetime_fmt=UNIX_SECONDS_INTEGER_DATETIME_PARSING) \
-                as transformer:
+            try:
+                # Transform record using epoch seconds
+                transformed_record = seconds_transformer.transform(
+                    record,
+                    schema,
+                    stream_metadata)
+            except Exception as err:
                 try:
-                    transformed_record = transformer.transform(
+                    # Alternatively, transform using epoch millis
+                    transformed_record = milliseconds_transformer.transform(
                         record,
                         schema,
                         stream_metadata)
                 except Exception as err:
                     LOGGER.error('Transformer Error: {}'.format(err))
-                    LOGGER.error('Stream: {}, record: {}'.format(stream_name, record))
                     raise
-                # Reset max_bookmark_value to new value if higher
-                if transformed_record.get(bookmark_field):
-                    if max_bookmark_value is None or \
-                        transformed_record[bookmark_field] > transform_datetime(max_bookmark_value):
-                        max_bookmark_value = transformed_record[bookmark_field]
-                        # LOGGER.info('{}, increase max_bookkmark_value: {}'.format(stream_name, max_bookmark_value))
+            # Reset max_bookmark_value to new value if higher
+            if transformed_record.get(bookmark_field):
+                if max_bookmark_value is None or \
+                   transformed_record[bookmark_field] > transform_datetime(max_bookmark_value):
+                    max_bookmark_value = transformed_record[bookmark_field]
+                    # LOGGER.info('{}, increase max_bookkmark_value: {}'.format(stream_name, max_bookmark_value))
 
-                if bookmark_field and (bookmark_field in transformed_record):
-                    if bookmark_type == 'integer':
-                        # Keep only records whose bookmark is after the last_integer
-                        if transformed_record[bookmark_field] >= last_integer:
-                            write_record(stream_name, transformed_record, \
-                                time_extracted=time_extracted)
-                            counter.increment()
-                    elif bookmark_type == 'datetime':
-                        last_dttm = transform_datetime(last_datetime)
-                        bookmark_dttm = transform_datetime(transformed_record[bookmark_field])
-                        # Keep only records whose bookmark is after the last_datetime
-                        if bookmark_dttm >= last_dttm:
-                            write_record(stream_name, transformed_record, \
-                                time_extracted=time_extracted)
-                            counter.increment()
-                else:
-                    write_record(stream_name, transformed_record, time_extracted=time_extracted)
-                    counter.increment()
+            if bookmark_field and (bookmark_field in transformed_record):
+                if bookmark_type == 'integer':
+                    # Keep only records whose bookmark is after the last_integer
+                    if transformed_record[bookmark_field] >= last_integer:
+                        write_record(stream_name, transformed_record, \
+                                     time_extracted=time_extracted)
+                        counter.increment()
+                elif bookmark_type == 'datetime':
+                    last_dttm = transform_datetime(last_datetime)
+                    bookmark_dttm = transform_datetime(transformed_record[bookmark_field])
+                    # Keep only records whose bookmark is after the last_datetime
+                    if bookmark_dttm >= last_dttm:
+                        write_record(stream_name, transformed_record, \
+                                     time_extracted=time_extracted)
+                        counter.increment()
+            else:
+                write_record(stream_name, transformed_record, time_extracted=time_extracted)
+                counter.increment()
 
         return max_bookmark_value, counter.value
 
