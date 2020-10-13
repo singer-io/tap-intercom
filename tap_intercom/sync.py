@@ -273,6 +273,7 @@ def sync_endpoint(client, #pylint: disable=too-many-branches
             }
     
     request_body = None
+    # Initial search query contains only a starting_time
     if search:
         search_query = endpoint_config.get('search_query')
         request_body = build_query(search_query, max_bookmark_int)
@@ -443,6 +444,7 @@ def sync_endpoint(client, #pylint: disable=too-many-branches
         elif search:
             pagination = data.get('pages', {}).get('next', {})
             starting_after = pagination.get('starting_after', None)
+            # Subsequent search queries require starting_after
             if starting_after:
                 request_body = build_query(search_query, max_bookmark_int, starting_after)
             else:
