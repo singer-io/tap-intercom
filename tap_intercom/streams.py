@@ -1,3 +1,5 @@
+import json
+
 # streams: API URL endpoints to be called
 # properties:
 #   <root node>: Plural stream name for the endpoint
@@ -15,6 +17,15 @@
 #   scroll_type: always, historical, or never; default never
 #   interpolate_page: True, False (to determine start page based on total pages and bookmark)
 #       default: False
+
+def build_query(body, value, starting_after=None):
+    body['query']['value'] = value
+    if starting_after:
+        body['pagination'] = {
+            'starting_after': starting_after
+        }
+    return body
+
 
 STREAMS = {
     'admin_list': {
@@ -94,7 +105,19 @@ STREAMS = {
         }
     },
     'contacts': {
-        'path': 'contacts',
+        'path': 'contacts/search',
+        'method': 'POST',
+        'search_query': {
+            'query': {
+                'field': 'updated_at',
+                'operator': '>',
+                'value': 'value'
+            },
+            'sort': {
+                'field': 'updated_at',
+                'order': 'ascending'
+            }
+        },
         'data_key': 'data',
         'key_properties': ['id'],
         'replication_method': 'INCREMENTAL',
@@ -102,7 +125,7 @@ STREAMS = {
         'bookmark_type': 'datetime',
         'batch_size': 150,
         # V2 APIs are starting to adopt a cursor-based approach to pagination
-        'cursor': True
+        'search': True
     },
     'segments': {
         'key_properties': ['id'],
