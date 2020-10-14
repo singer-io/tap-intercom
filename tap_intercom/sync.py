@@ -80,7 +80,7 @@ def process_records(catalog, #pylint: disable=too-many-branches
             if parent_id and parent:
                 record[parent + '_id'] = parent_id
 
-            
+
             # API returns inconsistent epoch representations sec AND millis
             # Normalizes to millisecond for transformer
             transform_epochs(record, schema_datetimes)

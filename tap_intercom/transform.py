@@ -1,4 +1,6 @@
 # De-nest each list node up to record level
+import math as m
+
 def denest_list_nodes(this_json, data_key, list_nodes):
     new_json = this_json
     i = 0
@@ -61,8 +63,17 @@ def find_datetimes_in_schema(schema):
             datetimes.append(element)
     return datetimes
 
+def get_integer_places(value):
+    if value <= 999999999999997:
+        return int(m.log10(value)) + 1
+    counter = 15
+    while value >= 10**counter:
+        counter += 1
+    return counter
+
 
 def transform_epochs(record, schema_datetimes):
     for datetime in schema_datetimes:
-        if datetime in record and record[datetime]:
+        if datetime in record and record[datetime] and get_integer_places(
+                record[datetime]) == 10:
             record[datetime] = record[datetime] * 1000
