@@ -52,3 +52,17 @@ def transform_json(this_json, stream_name, data_key):
     if data_key in new_json:
         return new_json[data_key]
     return new_json
+
+
+def find_datetimes_in_schema(schema):
+    datetimes = []
+    for element, value in schema['properties'].items():
+        if 'format' in value and value['format'] == 'date-time':
+            datetimes.append(element)
+    return datetimes
+
+
+def transform_epochs(record, schema_datetimes):
+    for datetime in schema_datetimes:
+        if datetime in record and record[datetime]:
+            record[datetime] = record[datetime] * 1000

@@ -1,9 +1,9 @@
 import time
 import math
 import singer
-from singer import metrics, metadata, Transformer, utils, UNIX_SECONDS_INTEGER_DATETIME_PARSING
+from singer import metrics, metadata, Transformer, utils, UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING
 from singer.utils import strptime_to_utc
-from tap_intercom.transform import transform_json
+from tap_intercom.transform import transform_json, transform_epochs, find_datetimes_in_schema
 from tap_intercom.streams import STREAMS, flatten_streams
 
 LOGGER = singer.get_logger()
@@ -72,14 +72,21 @@ def process_records(catalog, #pylint: disable=too-many-branches
     schema = stream.schema.to_dict()
     stream_metadata = metadata.to_map(stream.metadata)
 
+    schema_datetimes = find_datetimes_in_schema(schema)
+
     with metrics.record_counter(stream_name) as counter:
         for record in records:
             # If child object, add parent_id to record
             if parent_id and parent:
                 record[parent + '_id'] = parent_id
 
+            
+            # API returns inconsistent epoch representations sec AND millis
+            # Normalizes to millisecond for transformer
+            transform_epochs(record, schema_datetimes)
+
             # Transform record for Singer.io
-            with Transformer(integer_datetime_fmt=UNIX_SECONDS_INTEGER_DATETIME_PARSING) \
+            with Transformer(integer_datetime_fmt=UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) \
                 as transformer:
                 try:
                     transformed_record = transformer.transform(
