@@ -1,6 +1,7 @@
-# De-nest each list node up to record level
 import math as m
 
+
+# De-nest each list node up to record level
 def denest_list_nodes(this_json, data_key, list_nodes):
     new_json = this_json
     i = 0
@@ -71,7 +72,7 @@ def get_integer_places(value):
         counter += 1
     return counter
 
-
+# Only want to transform seconds to millis here
 def transform_epochs(record, schema_datetimes):
     for datetime in schema_datetimes:
         if datetime in record and record[datetime] and get_integer_places(
