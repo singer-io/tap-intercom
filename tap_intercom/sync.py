@@ -1,10 +1,11 @@
+import json
 import time
 import math
 import singer
 from singer import metrics, metadata, Transformer, utils, UNIX_SECONDS_INTEGER_DATETIME_PARSING
 from singer.utils import strptime_to_utc
 from tap_intercom.transform import transform_json
-from tap_intercom.streams import STREAMS, flatten_streams
+from tap_intercom.streams import STREAMS, flatten_streams, build_query
 
 LOGGER = singer.get_logger()
 
@@ -173,6 +174,7 @@ def sync_endpoint(client, #pylint: disable=too-many-branches
     # Check whether the endpoint supports a cursor
     # https://developers.intercom.com/intercom-api-reference/reference#pagination-cursor
     cursor = endpoint_config.get('cursor', False)
+    search = endpoint_config.get('search', False)
 
     # Scroll for always re-syncs
     if scroll_type == 'always':
@@ -269,6 +271,12 @@ def sync_endpoint(client, #pylint: disable=too-many-branches
                 'per_page': limit,
                 **static_params # adds in endpoint specific, sort, filter params
             }
+    
+    request_body = None
+    # Initial search query contains only a starting_time
+    if search:
+        search_query = endpoint_config.get('search_query')
+        request_body = build_query(search_query, max_bookmark_int)
 
     i = 1
     while next_url is not None:
@@ -291,11 +299,13 @@ def sync_endpoint(client, #pylint: disable=too-many-branches
 
         # API request data
         data = {}
-        data = client.get(
+        data = client.perform(
+            method=endpoint_config.get('method'),
             url=next_url,
             path=path,
             params=querystring,
-            endpoint=stream_name)
+            endpoint=stream_name,
+            json=request_body)
 
         # LOGGER.info('data = {}'.format(data)) # TESTING, comment out
 
@@ -422,7 +432,6 @@ def sync_endpoint(client, #pylint: disable=too-many-branches
 
         # set total_records and next_url for pagination
         total_records = total_records + record_count
-        next_url = None
         if is_scrolling:
             scroll_param = data.get('scroll_param')
             if not scroll_param:
@@ -432,6 +441,14 @@ def sync_endpoint(client, #pylint: disable=too-many-branches
             pagination = data.get('pages', {}).get('next', {})
             starting_after = pagination.get('starting_after', None)
             next_url = '{}/{}?starting_after={}'.format(client.base_url, path, starting_after)
+        elif search:
+            pagination = data.get('pages', {}).get('next', {})
+            starting_after = pagination.get('starting_after', None)
+            # Subsequent search queries require starting_after
+            if starting_after:
+                request_body = build_query(search_query, max_bookmark_int, starting_after)
+            else:
+                next_url = None
         else:
             next_url = data.get('pages', {}).get('next', None)
 
