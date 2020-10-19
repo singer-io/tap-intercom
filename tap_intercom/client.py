@@ -220,7 +220,6 @@ class IntercomClient(object):
         return self.request('POST', path=path, **kwargs)
 
     def perform(self, method, path, **kwargs):
-        if method=='POST': 
+        if method=='POST':
             return self.post(path, **kwargs)
-        else:
-            return self.get(path, **kwargs)
+        return self.get(path, **kwargs)

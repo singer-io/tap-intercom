@@ -1,4 +1,3 @@
-import json
 import time
 import math
 import singer
@@ -278,7 +277,7 @@ def sync_endpoint(client, #pylint: disable=too-many-branches
                 'per_page': limit,
                 **static_params # adds in endpoint specific, sort, filter params
             }
-    
+
     request_body = None
     # Initial search query contains only a starting_time
     if search:
