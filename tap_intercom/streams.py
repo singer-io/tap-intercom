@@ -1,5 +1,3 @@
-import json
-
 # streams: API URL endpoints to be called
 # properties:
 #   <root node>: Plural stream name for the endpoint
