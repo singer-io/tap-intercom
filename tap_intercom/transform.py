@@ -1,5 +1,8 @@
 import math as m
 
+import singer
+from singer.utils import strptime_to_utc
+
 
 # De-nest each list node up to record level
 def denest_list_nodes(this_json, data_key, list_nodes):
@@ -72,11 +75,15 @@ def get_integer_places(value):
         counter += 1
     return counter
 
+
 # API returns date times, epoch seconds and epoch millis
-# Only want to transform epoch seconds to millis here
-def transform_epochs(record, schema_datetimes):
+# Transform datetimes to epoch millis
+# Transform epoch seconds to millis
+def transform_times(record, schema_datetimes):
     for datetime in schema_datetimes:
-        if datetime in record and record[datetime] and not isinstance(
-                record[datetime], str) and get_integer_places(
-                    record[datetime]) == 10:
-            record[datetime] = record[datetime] * 1000
+        if datetime in record and record[datetime]:
+            if isinstance(record[datetime], str):
+                record[datetime] = strptime_to_utc(
+                    record[datetime]).timestamp() * 1000
+            elif get_integer_places(record[datetime]) == 10:
+                record[datetime] = record[datetime] * 1000
