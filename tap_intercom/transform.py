@@ -72,9 +72,11 @@ def get_integer_places(value):
         counter += 1
     return counter
 
-# Only want to transform seconds to millis here
+# API returns date times, epoch seconds and epoch millis
+# Only want to transform epoch seconds to millis here
 def transform_epochs(record, schema_datetimes):
     for datetime in schema_datetimes:
-        if datetime in record and record[datetime] and get_integer_places(
-                record[datetime]) == 10:
+        if datetime in record and record[datetime] and not isinstance(
+                record[datetime], str) and get_integer_places(
+                    record[datetime]) == 10:
             record[datetime] = record[datetime] * 1000
