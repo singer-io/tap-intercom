@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.0.2
+  * Support date time strings from API in tranform
+
 ## 1.0.1
   * Fix for inconsistem epoch formats from API. Normalize all to milli.
 
