@@ -1,6 +1,5 @@
 import math as m
 
-import singer
 from singer.utils import strptime_to_utc
 
 
