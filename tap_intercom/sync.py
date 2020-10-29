@@ -3,7 +3,7 @@ import math
 import singer
 from singer import metrics, metadata, Transformer, utils, UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING
 from singer.utils import strptime_to_utc
-from tap_intercom.transform import transform_json, transform_epochs, find_datetimes_in_schema
+from tap_intercom.transform import transform_json, transform_times, find_datetimes_in_schema
 from tap_intercom.streams import STREAMS, flatten_streams, build_query
 
 LOGGER = singer.get_logger()
@@ -82,8 +82,8 @@ def process_records(catalog, #pylint: disable=too-many-branches
 
 
             # API returns inconsistent epoch representations sec AND millis
-            # Normalizes to millisecond for transformer
-            transform_epochs(record, schema_datetimes)
+            # in addition to utc timestamps. Normalize to milli for transformer
+            transform_times(record, schema_datetimes)
 
             # Transform record for Singer.io
             with Transformer(integer_datetime_fmt=UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) \
