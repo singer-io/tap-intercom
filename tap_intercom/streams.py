@@ -17,7 +17,9 @@
 #       default: False
 
 def build_query(body, value, starting_after=None):
-    body['query']['value'] = value
+    # Update both the > and the = queries with our bookmark
+    body['query']['value'][0]['value'] = value
+    body['query']['value'][1]['value'] = value
     if starting_after:
         body['pagination'] = {
             'starting_after': starting_after
@@ -107,9 +109,19 @@ STREAMS = {
         'method': 'POST',
         'search_query': {
             'query': {
-                'field': 'updated_at',
-                'operator': '>',
-                'value': 'value'
+                'operator': 'OR',
+                'value': [
+                    {
+                        'field': 'updated_at',
+                        'operator': '>',
+                        'value': 'value'
+                    },
+                    {
+                        'field': 'updated_at',
+                        'operator': '=',
+                        'value': 'value'
+                    }
+                    ]
             },
             'sort': {
                 'field': 'updated_at',
