@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.0.3
+  * Ensure nested times are transformed
+
 ## 1.0.2
   * Support date time strings from API in tranform
 
