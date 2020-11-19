@@ -66,7 +66,7 @@ def transform_json(this_json, stream_name, data_key):
 def find_datetimes_in_schema(schema):
     paths = []
     if 'properties' in schema and isinstance(schema, dict):
-        for k, v in schema['properties'].items():
+        for k, v in schema['properties'].items(): #pylint: disable=invalid-name
             if 'format' in v and v['format'] == 'date-time':
                 paths.append([k])
             else:
