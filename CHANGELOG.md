@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.1.2
+  * Set replication keys to automatic
+
 ## 1.1.1
   * Ensure nested times are transformed
 
