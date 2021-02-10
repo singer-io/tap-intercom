@@ -67,12 +67,15 @@ def find_datetimes_in_schema(schema):
     return datetimes
 
 def get_integer_places(value):
-    if value <= 999999999999997:
+    if 0 <= value <= 999999999999997:
         return int(m.log10(value)) + 1
-    counter = 15
-    while value >= 10**counter:
-        counter += 1
-    return counter
+    elif value < 0:
+        return 10
+    else:
+        counter = 15
+        while value >= 10**counter:
+            counter += 1
+        return counter
 
 
 # API returns date times, epoch seconds and epoch millis
