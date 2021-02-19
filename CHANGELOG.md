@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.2
+  * Set replication keys to automatic
+
+## 1.1.1
+  * Ensure nested times are transformed
+
 ## 1.1.0
   * Query the `contacts` stream as `greater than or equal to` the bookmark [#14](https://github.com/singer-io/tap-intercom/pull/14)
 
