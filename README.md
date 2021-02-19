@@ -248,6 +248,11 @@ reference#list-customer-data-attributes)
     | companies           | 7182    | 1       |
     +---------------------+---------+---------+
     ```
+
+    To run unit tests run the following command:
+    ```
+    python -m nose
+    ```
 ---
 
 Copyright &copy; 2019 Stitch
