@@ -46,7 +46,9 @@ class IntercomBaseTest(unittest.TestCase):
     def get_properties(self, original: bool = True):
         """Configuration properties required for the tap."""
         return_value = {
-            'start_date' : '2019-01-01T00:00:00Z'
+            'access_token': os.getenv('TAP_INTERCOM_ACCESS_TOKEN'),
+            'start_date' : '2019-01-01T00:00:00Z',
+            'user_agent': 'tap-intercom <api_user_email@your_company.com>'
         }
         if original:
             return return_value
@@ -62,7 +64,7 @@ class IntercomBaseTest(unittest.TestCase):
     def expected_metadata(self):
         """The expected streams and metadata about the streams"""
         return {
-            "admin_list": {
+            "admins": {
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.FULL_TABLE,
             },

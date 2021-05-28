@@ -16,7 +16,9 @@ class IntercomBookmarks(IntercomBaseTest):
     def get_properties(self, original: bool = True):
         """Configuration properties required for the tap."""
         return_value = {
-            'start_date' : '2019-07-22T00:00:00Z'
+            'access_token': os.getenv('TAP_INTERCOM_ACCESS_TOKEN'),
+            'start_date' : '2019-07-22T00:00:00Z',
+            'user_agent': 'tap-intercom <api_user_email@your_company.com>'
         }
         if original:
             return return_value
