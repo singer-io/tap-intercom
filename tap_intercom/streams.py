@@ -155,6 +155,15 @@ STREAMS = {
         'key_properties': ['id'],
         'replication_method': 'FULL_TABLE'
     },
+    'admins_activity_logs': {
+        'key_properties': ['id'],
+        'replication_method': 'INCREMENTAL',
+        'replication_keys': ['created_at'],
+        'bookmark_type': 'datetime',
+        'data_key': 'activity_logs',
+        'path': 'admins/activity_logs',
+        'bookmark_query_field': 'created_at_after'
+    },
 }
 
 
