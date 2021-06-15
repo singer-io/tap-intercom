@@ -97,6 +97,7 @@ def process_records(catalog, #pylint: disable=too-many-branches
                     LOGGER.error('Transformer Error: {}'.format(err))
                     LOGGER.error('Stream: {}, record: {}'.format(stream_name, record))
                     raise
+
                 # Reset max_bookmark_value to new value if higher
                 if transformed_record.get(bookmark_field):
                     if max_bookmark_value is None or \
@@ -284,6 +285,8 @@ def sync_endpoint(client, #pylint: disable=too-many-branches
         search_query = endpoint_config.get('search_query')
         request_body = build_query(search_query, max_bookmark_int)
 
+    bookmark_query_field_to_epoch = endpoint_config.get('bookmark_query_field_to_epoch', False)
+
     i = 1
     while next_url is not None:
         # Need URL querystring for 1st page; subsequent pages provided by next_url
@@ -291,7 +294,10 @@ def sync_endpoint(client, #pylint: disable=too-many-branches
         if i == 1 and not is_scrolling:
             if bookmark_query_field:
                 if bookmark_type == 'datetime':
-                    params[bookmark_query_field] = updated_since_days
+                    if bookmark_query_field_to_epoch:
+                        params[bookmark_query_field] = max_bookmark_int
+                    else:
+                        params[bookmark_query_field] = updated_since_days
                 elif bookmark_type == 'integer':
                     params[bookmark_query_field] = last_integer
             if params != {}:
