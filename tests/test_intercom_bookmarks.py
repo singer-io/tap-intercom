@@ -13,20 +13,6 @@ class IntercomBookmarks(IntercomBaseTest):
     def name():
         return "tap_tester_intercom_bookmarks"
 
-    def get_properties(self, original: bool = True):
-        """Configuration properties required for the tap."""
-        return_value = {
-            'access_token': os.getenv('TAP_INTERCOM_ACCESS_TOKEN'),
-            'start_date' : '2019-07-22T00:00:00Z',
-            'user_agent': 'tap-intercom <api_user_email@your_company.com>'
-        }
-        if original:
-            return return_value
-
-        return_value["start_date"] = self.start_date
-
-        return return_value
-
     @staticmethod
     def convert_state_to_utc(date_str):
         """
