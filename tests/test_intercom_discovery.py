@@ -24,8 +24,6 @@ class DiscoveryTest(IntercomBaseTest):
         • verify there is only 1 top level breadcrumb
         • verify replication key(s)
         • verify primary key(s)
-        • verify that if there is a replication key we are doing INCREMENTAL otherwise FULL
-        • verify the actual replication matches our expected replication method
         • verify that primary, replication and foreign keys
           are given the inclusion of automatic.
         • verify that all other fields have inclusion of available metadata.
@@ -54,7 +52,6 @@ class DiscoveryTest(IntercomBaseTest):
                 expected_primary_keys = self.expected_primary_keys()[stream]
                 expected_replication_keys = self.expected_replication_keys()[stream]
                 expected_automatic_fields = expected_primary_keys | expected_replication_keys
-                expected_replication_method = self.expected_replication_method()[stream]
 
                 # collecting actual values...
                 schema_and_metadata = menagerie.get_annotated_schema(conn_id, catalog['stream_id'])
@@ -64,12 +61,6 @@ class DiscoveryTest(IntercomBaseTest):
                     stream_properties[0].get(
                         "metadata", {self.PRIMARY_KEYS: []}).get(self.PRIMARY_KEYS, [])
                 )
-                actual_replication_keys = set(
-                    stream_properties[0].get(
-                        "metadata", {self.REPLICATION_KEYS: []}).get(self.REPLICATION_KEYS, [])
-                )
-                actual_replication_method = stream_properties[0].get(
-                    "metadata", {self.REPLICATION_METHOD: None}).get(self.REPLICATION_METHOD)
                 actual_automatic_fields = set(
                     item.get("breadcrumb", ["properties", None])[1] for item in metadata
                     if item.get("metadata").get("inclusion") == "automatic"
@@ -84,32 +75,8 @@ class DiscoveryTest(IntercomBaseTest):
                                 msg="There is NOT only one top level breadcrumb for {}".format(stream) + \
                                 "\nstream_properties | {}".format(stream_properties))
 
-                # BUG_1 | https://stitchdata.atlassian.net/browse/SRCE-4855
-                failing_with_no_replication_keys = {}
-                if stream not in failing_with_no_replication_keys:  # BUG_1
-                    # verify replication key(s) match expectations
-                    self.assertSetEqual(
-                        expected_replication_keys, actual_replication_keys
-                    )
-
                 # verify primary key(s) match expectations
-                self.assertSetEqual(
-                    expected_primary_keys, actual_primary_keys,
-                )
-
-                # BUG_2 | https://stitchdata.atlassian.net/browse/SRCE-4856
-                failing_with_no_replication_method = {}
-                if stream not in failing_with_no_replication_method:  # BUG_2
-                    # verify the replication method matches our expectations
-                    self.assertEqual(
-                        expected_replication_method, actual_replication_method
-                    )
-
-                    # verify that if there is a replication key we are doing INCREMENTAL otherwise FULL
-                    if actual_replication_keys:
-                        self.assertEqual(self.INCREMENTAL, actual_replication_method)
-                    else:
-                        self.assertEqual(self.FULL_TABLE, actual_replication_method)
+                self.assertSetEqual(expected_primary_keys, actual_primary_keys)
 
                 # verify that primary keys and replication keys
                 # are given the inclusion of automatic in metadata.
