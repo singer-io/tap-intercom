@@ -53,14 +53,14 @@ class IntercomAutomaticFields(IntercomBaseTest):
                 expected_keys = self.expected_automatic_fields().get(stream)
 
                 # collect actual values
-                data = synced_records.get(stream)
-                record_messages_keys = [set(row['data'].keys()) for row in data['messages']]
+                data = synced_records.get(stream, {})
+                record_messages_keys = [set(row.get('data').keys()) for row in data.get('messages', {})]
 
 
                 # Verify that you get some records for each stream
                 self.assertGreater(
                     record_count_by_stream.get(stream, -1), 0,
-                    msg="The number of records is not over the stream max limit")
+                    msg="The number of records is not over the stream max limit for the {} stream".format(stream))
 
                 # Verify that only the automatic fields are sent to the target
                 for actual_keys in record_messages_keys:
