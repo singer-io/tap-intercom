@@ -31,7 +31,7 @@ class IntercomBaseTest(unittest.TestCase):
     BOOKMARK_COMPARISON_FORMAT = "%Y-%m-%dT00:00:00+00:00"
     LOGGER = singer.get_logger()
 
-    start_date = "2019-01-01T00:00:00Z"
+    start_date = "2021-01-01T00:00:00Z"
 
     @staticmethod
     def tap_name():
@@ -46,8 +46,7 @@ class IntercomBaseTest(unittest.TestCase):
     def get_properties(self, original: bool = True):
         """Configuration properties required for the tap."""
         return_value = {
-            'start_date' : '2019-01-01T00:00:00Z',
-            'user_agent': 'tap-intercom <api_user_email@your_company.com>'
+            'start_date' : '2021-01-01T00:00:00Z',
         }
         if original:
             return return_value
