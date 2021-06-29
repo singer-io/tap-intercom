@@ -19,11 +19,9 @@ setup(name='tap-intercom',
       ''',
       packages=find_packages(),
       package_data={
-          'tap_intercom': [
-              'schemas/*.json',
-              'tests/*.py'
-          ]
-      },
+          'schemas': ['tap_intercom/schemas/*.json']
+       },
+       include_package_data=True,
       extras_require={
           'dev': [
               'pylint',

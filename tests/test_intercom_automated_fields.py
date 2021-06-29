@@ -1,8 +1,6 @@
 """
 Test that with no fields selected for a stream automatic fields are still replicated
 """
-import os
-
 from tap_tester import runner, connections
 
 from base import IntercomBaseTest
