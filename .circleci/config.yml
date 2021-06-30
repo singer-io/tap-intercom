@@ -19,7 +19,7 @@ jobs:
       - run:
           name: 'Unit Tests'
           command: |
-            source /usr/local/share/virtualenvs/tap-intercom/activate
+            source /usr/local/share/virtualenvs/tap-intercom/bin/activate
             nosetests tests/unittests/
       - add_ssh_keys
       - run:
