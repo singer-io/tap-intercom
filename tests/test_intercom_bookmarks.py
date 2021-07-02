@@ -29,34 +29,27 @@ class IntercomBookmarks(IntercomBaseTest):
         value based off timedelta expectations. This ensures the subsequent sync will replicate
         at least 1 record but, fewer records than the previous sync.
 
-        Sufficient test data is required for this test to cover a given stream.
-        An incremental replication stream must have at least two records with
-        replication keys that differ by more than the lookback window.
-
         If the test data is changed in the future this will break expectations for this test.
 
         The following streams barely make the cut:
 
-        companies           "2021-02-09T18:17:30.000000Z"
-                            "2021-02-09T16:24:58.000000Z"
-        company_segments    "2021-02-09T18:17:41.000000Z"
-                            "2021-02-09T17:10:09.000000Z"
-        conversations       '2021-04-07T20:09:39+0000'
-                            '2021-04-07T20:08:27+0000'
-        contacts            '2021-04-07T20:09:39+0000'
-                            '2021-04-07T20:08:27+0000'
-        segments            '2021-04-07T20:09:39+0000'
-                            '2021-04-07T20:08:27+0000'
+        companies           "2021-06-14T00:00:00.000000Z"
+                            "2021-06-15T00:00:00.000000Z"
+        company_segments    "2021-06-14T00:00:00.000000Z"
+                            "2021-06-15T00:00:00.000000Z"
+        conversations       '2021-06-14T00:00:00.000000Z'
+                            '2021-06-15T00:00:00.000000Z'
+        contacts            '2021-06-14T00:00:00.000000Z'
+                            '2021-06-15T00:00:00.000000Z'
+        segments            '2021-06-14T00:00:00.000000Z'
+                            '2021-06-15T00:00:00.000000Z'
         """
-        timedelta_by_stream = {stream: [2,0,0]  # {stream_name: [days, hours, minutes], ...}
+        timedelta_by_stream = {stream: [30,0,0]  # {stream_name: [days, hours, minutes], ...}
                                for stream in self.expected_streams()}
-        timedelta_by_stream['companies'] = [0, 1, 0]
-        timedelta_by_stream['company_segments'] = [0, 1, 0]
-        timedelta_by_stream['conversations'] = [0, 0 , 1]
 
         stream_to_calculated_state = {stream: "" for stream in current_state['bookmarks'].keys()}
         for stream, state in current_state['bookmarks'].items():
-            state_key, state_value = next(iter(state.keys())), next(iter(state.values()))
+            state_key, state_value = next(iter(state.keys())), next(iter(state.values()))            
             state_as_datetime = dateutil.parser.parse(state_value)
 
             days, hours, minutes = timedelta_by_stream[stream]
@@ -73,13 +66,6 @@ class IntercomBookmarks(IntercomBaseTest):
     def test_run(self):
         expected_streams =  self.expected_streams()
 
-        # Testing against core objects
-        self.end_date = '2021-02-09T00:00:00Z'
-        self.bookmarks_test(expected_streams)
-
-
-    def bookmarks_test(self, expected_streams):
-        """A Parametrized Bookmarks Test"""
         expected_replication_keys = self.expected_replication_keys()
         expected_replication_methods = self.expected_replication_method()
 
@@ -87,7 +73,7 @@ class IntercomBookmarks(IntercomBaseTest):
         ### First Sync
         ##########################################################################
 
-        conn_id = connections.ensure_connection(self, original_properties=False)
+        conn_id = connections.ensure_connection(self, original_properties=True)
 
         # Run in check mode
         found_catalogs = self.run_and_verify_check_mode(conn_id)
@@ -151,9 +137,6 @@ class IntercomBookmarks(IntercomBaseTest):
                     second_bookmark_value = second_bookmark_key_value.get(replication_key)
                     first_bookmark_value_utc = self.convert_state_to_utc(first_bookmark_value)
                     second_bookmark_value_utc = self.convert_state_to_utc(second_bookmark_value)
-                    simulated_bookmark_value = new_states['bookmarks'][stream][replication_key]
-                    simulated_bookmark_minus_lookback = simulated_bookmark_value
-
 
                     # Verify the first sync sets a bookmark of the expected form
                     self.assertIsNotNone(first_bookmark_key_value)
@@ -168,13 +151,8 @@ class IntercomBookmarks(IntercomBaseTest):
 
 
                     for record in second_sync_messages:
-
-                        # Verify the second sync records respect the previous (simulated) bookmark value
-                        replication_key_value = record.get(replication_key)
-                        self.assertGreaterEqual(replication_key_value, simulated_bookmark_minus_lookback,
-                                                msg="Second sync records do not respect the previous bookmark.")
-
                         # Verify the second sync bookmark value is the max replication key value for a given stream
+                        replication_key_value = record.get(replication_key)
                         self.assertLessEqual(
                             replication_key_value, second_bookmark_value_utc,
                             msg="Second sync bookmark was set incorrectly, a record with a greater replication-key value was synced."

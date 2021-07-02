@@ -28,20 +28,16 @@ def write_record(stream_name, record, time_extracted):
         raise err
 
 
-def get_bookmark(state, stream, default):
+def get_bookmark(state, stream, bookmark_field, default):
     if (state is None) or ('bookmarks' not in state):
         return default
-    return (
-        state
-        .get('bookmarks', {})
-        .get(stream, default)
-    )
+    return singer.get_bookmark(state, stream, bookmark_field, default)
 
 
-def write_bookmark(state, stream, value):
+def write_bookmark(state, stream, bookmark_field, value):
     if 'bookmarks' not in state:
         state['bookmarks'] = {}
-    state['bookmarks'][stream] = value
+    state['bookmarks'][stream] = {bookmark_field: value}
     LOGGER.info('Write state for stream: {}, value: {}'.format(stream, value))
     singer.write_state(state)
 
@@ -150,10 +146,10 @@ def sync_endpoint(client, #pylint: disable=too-many-branches
     last_integer = None
     max_bookmark_value = None
     if bookmark_type == 'integer':
-        last_integer = get_bookmark(state, stream_name, 0)
+        last_integer = get_bookmark(state, stream_name, bookmark_field, 0)
         max_bookmark_value = last_integer
     else:
-        last_datetime = get_bookmark(state, stream_name, start_date)
+        last_datetime = get_bookmark(state, stream_name, bookmark_field, start_date)
         max_bookmark_value = last_datetime
         LOGGER.info('{}, initial max_bookmark_value {}'.format(stream_name, max_bookmark_value))
         max_bookmark_dttm = strptime_to_utc(last_datetime)
@@ -460,7 +456,7 @@ def sync_endpoint(client, #pylint: disable=too-many-branches
 
         # Update the state with the max_bookmark_value for non-scrolling
         if bookmark_field and not is_scrolling:
-            write_bookmark(state, stream_name, max_bookmark_value)
+            write_bookmark(state, stream_name, bookmark_field, max_bookmark_value)
 
         # to_rec: to record; ending record for the batch page
         to_rec = offset + rec_count
@@ -482,7 +478,7 @@ def sync_endpoint(client, #pylint: disable=too-many-branches
 
     # Update the state with the max_bookmark_value for non-scrolling
     if bookmark_field and is_scrolling:
-        write_bookmark(state, stream_name, max_bookmark_value)
+        write_bookmark(state, stream_name, bookmark_field, max_bookmark_value)
 
     return total_records
 
