@@ -69,10 +69,14 @@ class IntercomBookmarks(IntercomBaseTest):
         expected_replication_keys = self.expected_replication_keys()
         expected_replication_methods = self.expected_replication_method()
 
+        self.start_date_1 = self.get_properties().get("start_date")
+        self.start_date_2 = self.timedelta_formatted(self.start_date_1, days=30)
+
         ##########################################################################
         ### First Sync
         ##########################################################################
 
+        self.start_date = self.start_date_1
         conn_id = connections.ensure_connection(self, original_properties=True)
 
         # Run in check mode
@@ -100,6 +104,17 @@ class IntercomBookmarks(IntercomBaseTest):
         ##########################################################################
         ### Second Sync
         ##########################################################################
+
+        self.start_date = self.start_date_2
+        conn_id = connections.ensure_connection(self, original_properties=False)
+
+        # run check mode
+        found_catalogs = self.run_and_verify_check_mode(conn_id)
+
+        # table and field selection
+        test_catalogs_2_all_fields = [catalog for catalog in found_catalogs
+                                      if catalog.get('tap_stream_id') in expected_streams]
+        self.perform_and_verify_table_and_field_selection(conn_id, test_catalogs_2_all_fields, select_all_fields=True)
 
         second_sync_record_count = self.run_and_verify_sync(conn_id)
         second_sync_records = runner.get_records_from_target_output()
