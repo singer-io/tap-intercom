@@ -46,7 +46,7 @@ class IntercomBaseTest(unittest.TestCase):
     def get_properties(self, original: bool = True):
         """Configuration properties required for the tap."""
         return_value = {
-            'start_date' : '2021-07-01T00:00:00Z',
+            'start_date' : '2021-06-01T00:00:00Z',
         }
         if original:
             return return_value
