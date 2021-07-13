@@ -44,8 +44,7 @@ STREAMS = {
     },
     'companies': {
         'key_properties': ['id'],
-        'replication_method': 'INCREMENTAL',
-        'replication_keys': ['updated_at'],
+        'replication_method': 'FULL_TABLE', # Scroll API does not support incremental replication
         'bookmark_type': 'datetime',
         'scroll_type': 'always',
         'data_key': 'data'

@@ -11,7 +11,7 @@ setup(name='tap-intercom',
       install_requires=[
           'backoff==1.8.0',
           'requests==2.23.0',
-          'singer-python==5.9.0'
+          'singer-python==5.10.0'
       ],
       entry_points='''
           [console_scripts]
@@ -19,11 +19,9 @@ setup(name='tap-intercom',
       ''',
       packages=find_packages(),
       package_data={
-          'tap_intercom': [
-              'schemas/*.json',
-              'tests/*.py'
-          ]
-      },
+          'schemas': ['tap_intercom/schemas/*.json']
+       },
+       include_package_data=True,
       extras_require={
           'dev': [
               'pylint',
