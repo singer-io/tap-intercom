@@ -1,54 +1,37 @@
-import time
-import math
+
 import singer
-from singer import metrics, metadata, Transformer, utils, UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING
-from singer.utils import strptime_to_utc
-from tap_intercom.transform import transform_json, transform_times, find_datetimes_in_schema
-from tap_intercom.streams import STREAMS, flatten_streams, build_query
-
-LOGGER = singer.get_logger()
+from singer import Transformer, metadata
 
 
-def write_schema(catalog, stream_name):
-    stream = catalog.get_stream(stream_name)
-    schema = stream.schema.to_dict()
-    try:
-        singer.write_schema(stream_name, schema, stream.key_properties)
-    except OSError as err:
-        LOGGER.info('OS Error writing schema for: {}'.format(stream_name))
-        raise err
-
-
-def write_record(stream_name, record, time_extracted):
-    try:
-        singer.messages.write_record(stream_name, record, time_extracted=time_extracted)
-    except OSError as err:
-        LOGGER.info('OS Error writing record for: {}'.format(stream_name))
-        LOGGER.info('record: {}'.format(record))
-        raise err
-
-
+<<<<<<< HEAD
 def get_bookmark(state, stream, bookmark_field, default):
     if (state is None) or ('bookmarks' not in state):
         return default
     return singer.get_bookmark(state, stream, bookmark_field, default)
+=======
+from tap_intercom.client import IntercomClient
+from tap_intercom.streams import STREAMS
+>>>>>>> f32016c (canges to sync.py)
 
+LOGGER = singer.get_logger()
 
+<<<<<<< HEAD
 def write_bookmark(state, stream, bookmark_field, value):
     if 'bookmarks' not in state:
         state['bookmarks'] = {}
     state['bookmarks'][stream] = {bookmark_field: value}
     LOGGER.info('Write state for stream: {}, value: {}'.format(stream, value))
     singer.write_state(state)
+=======
+def sync(config, state, catalog):
+    """ Sync data from tap source """
+>>>>>>> f32016c (canges to sync.py)
 
+    access_token = config.get('access_token')
+    client = IntercomClient(access_token, config.get('user_agent'))
 
-# def transform_datetime(this_dttm):
-#     with Transformer(integer_datetime_fmt=UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) \
-#         as transformer:
-#         new_dttm = transformer._transform_datetime(this_dttm)
-#     return new_dttm
-def transform_datetime(this_dttm):
     with Transformer() as transformer:
+<<<<<<< HEAD
         new_dttm = transformer._transform_datetime(this_dttm)
     return new_dttm
 
@@ -177,128 +160,30 @@ def sync_endpoint(client, #pylint: disable=too-many-branches
     # https://developers.intercom.com/intercom-api-reference/reference#pagination-cursor
     cursor = endpoint_config.get('cursor', False)
     search = endpoint_config.get('search', False)
+=======
+        for stream in catalog.get_selected_streams(state):
+            tap_stream_id = stream.tap_stream_id
+            stream_obj = STREAMS[tap_stream_id](client)
+            stream_schema = stream.schema.to_dict()
+            stream_metadata = metadata.to_map(stream.metadata)
+>>>>>>> f32016c (canges to sync.py)
 
-    # Scroll for always re-syncs
-    if scroll_type == 'always':
-        LOGGER.info('Stream: {}, Historical Sync, Using Scoll API'.format(stream_name))
-        is_scrolling = True
-        next_url = '{}/{}/scroll'.format(client.base_url, path)
-        params = {}
-    else:
-        is_scrolling = False
-        next_url = '{}/{}'.format(client.base_url, path)
+            LOGGER.info('Starting sync for stream: %s', tap_stream_id)
 
-        # INTERPOLATE PAGE:
-        # Endpoints: conversations and leads
-        # Pre-requisites: Endpoint allows SORT ASC by bookmark and PAGING, but does not provide query filtering params.
-        # Interpolate Page: Find start page based on sorting results, bookmark datetime, and binary search algorithm.
-        #    Algorithm tries to estimate start page based on bookmark, and then splits the difference if it
-        #       exceeds the start page or falls short of the start page based on the page's 1st and last record bookmarks.
-        interpolate_page = endpoint_config.get('interpolate_page', False)
-        if interpolate_page:
-            # Interpolate based on current page, total_pages, and updated_at to get first page
-            min_page = 1
-            max_page = 4 # initial value, reset to total_pages on 1st API call
-            i = 1
-            while (max_page - min_page) > 2:
-                params = {
-                    'page': page,
-                    'per_page': limit,
-                    **static_params # adds in endpoint specific, sort, filter params
-                }
-                querystring = '&'.join(['%s=%s' % (key, value) for (key, value) in params.items()])
-                # API request data
-                data = {}
-                data = client.get(
-                    path=path,
-                    params=querystring,
-                    endpoint=stream_name)
-                page = int(data.get('pages', {}).get('page'))
-                per_page = int(data.get('pages', {}).get('per_page'))
-                total_pages = int(data.get('pages', {}).get('total_pages'))
-                if i == 1:
-                    max_page = total_pages
-                list_len = len(data.get(data_key, []))
-                LOGGER.info('Interpolate start page: i = {}, page = {}, min_page = {}, max_page = {}'.format(i, page, min_page, max_page))
-                first_record_updated_int = data.get(data_key, [])[0].get('updated_at')
-                last_record_updated_int = data.get(data_key, [])[list_len - 1].get('updated_at')
-                if i == 1:
-                    # FIRST GUESS - based on TOTAL PAGES, last bookmark, and % of time difference: (bookmark - 1st Record) / (NOW - 1st Record)
-                    # Get next_page based on proportional ratio of time integers
-                    #  If bookmark datetime in at 90% of (NOW - 1st Record) and there are 100 pages TOTAL, then try page 90
-                    #  NOTE: It is better for NEXT GUESSES to slightly under-shoot - so that splitting the difference is smaller.
-                    #    If you start at 1, then over-shoot to 90, but the 1st Page is 89, the next_page guess will be 45.
-                    #    This is why next_page is 95% of pct_time x total_pages
-                    pct_time = ((max_bookmark_int - first_record_updated_int)/(now_int - first_record_updated_int))
-                    LOGGER.info('Interpolate percent based on time diff: {}%'.format(math.floor(pct_time * 100)))
-                    next_page = math.floor(0.95 * pct_time * total_pages)  # Adjust 1st GUESS to lower by 5% to under-shoot
-                    LOGGER.info('  next_page = {}'.format(next_page))
-                elif first_record_updated_int <= max_bookmark_int and last_record_updated_int >= max_bookmark_int:
-                    # First page found, stop looping
-                    min_page = page
-                    LOGGER.info('First page found. page = {}'.format(page))
-                    break
-                elif last_record_updated_int < max_bookmark_int:
-                    # Increase page by half
-                    min_page = page
-                    next_page = page + math.ceil((1 + max_page - min_page) / 2)
-                    LOGGER.info('Increase page. next_page = {}'.format(next_page))
-                elif first_record_updated_int > max_bookmark_int:
-                    # Decrease the page by half
-                    max_page = page
-                    next_page = page - math.floor((1 + max_page - min_page) / 2)
-                    LOGGER.info('Decrease page. next_page = {}'.format(next_page))
-                else:
-                    # Break out of loop
-                    break
-                page = next_page
-                i = i + 1
-            # Set params to interpolated page
-            params = {
-                'page': min_page,
-                'per_page': limit,
-                **static_params # adds in endpoint specific, sort, filter params
-            }
-            # FINISH INTERPOLATION
-        elif cursor:
-            params = {
-                'per_page': limit,
-                **static_params
-            }
-        # NORMAL SYNC - Not SCROLLING, Not INTERPOLATION
-        #   Standard INCREMENTAL or FULL TABLE
-        else:
-            params = {
-                'page': page,
-                'per_page': limit,
-                **static_params # adds in endpoint specific, sort, filter params
-            }
+            state = singer.set_currently_syncing(state, tap_stream_id)
+            singer.write_state(state)
 
-    request_body = None
-    # Initial search query contains only a starting_time
-    if search:
-        search_query = endpoint_config.get('search_query')
-        request_body = build_query(search_query, max_bookmark_int)
+            singer.write_schema(
+                tap_stream_id,
+                stream_schema,
+                stream_obj.key_properties,
+                stream.replication_key
+            )
 
-    i = 1
-    while next_url is not None:
-        # Need URL querystring for 1st page; subsequent pages provided by next_url
-        # querystring: Squash query params into string
-        if i == 1 and not is_scrolling:
-            if bookmark_query_field:
-                if bookmark_type == 'datetime':
-                    params[bookmark_query_field] = updated_since_days
-                elif bookmark_type == 'integer':
-                    params[bookmark_query_field] = last_integer
-            if params != {}:
-                querystring = '&'.join(['%s=%s' % (key, value) for (key, value) in params.items()])
-        else:
-            querystring = None
-        LOGGER.info('URL for Stream {}: {}{}'.format(
-            stream_name,
-            next_url,
-            '?{}'.format(querystring) if querystring else ''))
+            state = stream_obj.sync(state, stream_schema, stream_metadata, config, transformer)
+            singer.write_state(state)
 
+<<<<<<< HEAD
         # API request data
         data = {}
         data = client.perform(
@@ -492,80 +377,7 @@ def update_currently_syncing(state, stream_name):
         del state['currently_syncing']
     else:
         singer.set_currently_syncing(state, stream_name)
+=======
+    state = singer.set_currently_syncing(state, None)
+>>>>>>> f32016c (canges to sync.py)
     singer.write_state(state)
-
-
-# List selected fields from stream catalog
-def get_selected_fields(catalog, stream_name):
-    stream = catalog.get_stream(stream_name)
-    mdata = metadata.to_map(stream.metadata)
-    mdata_list = singer.metadata.to_list(mdata)
-    selected_fields = []
-    for entry in mdata_list:
-        field = None
-        try:
-            field = entry['breadcrumb'][1]
-            if entry.get('metadata', {}).get('selected', False):
-                selected_fields.append(field)
-        except IndexError:
-            pass
-    return selected_fields
-
-def sync(client, config, catalog, state):
-    if 'start_date' in config:
-        start_date = config['start_date']
-
-    # Get selected_streams from catalog, based on state last_stream
-    #   last_stream = Previous currently synced stream, if the load was interrupted
-    last_stream = singer.get_currently_syncing(state)
-    LOGGER.info('last/currently syncing stream: {}'.format(last_stream))
-    selected_streams = []
-
-    flat_streams = flatten_streams()
-
-    for stream in catalog.get_selected_streams(state):
-        selected_streams.append(stream.stream)
-        parent_stream = flat_streams.get(stream.stream, {}).get('parent_stream')
-        if parent_stream:
-            if parent_stream not in selected_streams:
-                selected_streams.append(parent_stream)
-    LOGGER.info('selected_streams: {}'.format(selected_streams))
-
-    if not selected_streams:
-        return
-
-    # Loop through selected_streams
-    for stream_name, endpoint_config in STREAMS.items():
-        if stream_name in selected_streams:
-            LOGGER.info('START Syncing: {}'.format(stream_name))
-            update_currently_syncing(state, stream_name)
-            path = endpoint_config.get('path', stream_name)
-            bookmark_field = next(iter(endpoint_config.get('replication_keys', [])), None)
-            replication_ind = endpoint_config.get('replication_ind', True)
-            if replication_ind:
-                selected_fields = get_selected_fields(catalog, stream_name)
-                LOGGER.info('Stream: {}, selected_fields: {}'.format(stream_name, selected_fields))
-                write_schema(catalog, stream_name)
-            else:
-                selected_fields = None
-            total_records = sync_endpoint(
-                client=client,
-                catalog=catalog,
-                state=state,
-                start_date=start_date,
-                stream_name=stream_name,
-                path=path,
-                endpoint_config=endpoint_config,
-                static_params=endpoint_config.get('params', {}),
-                bookmark_query_field=endpoint_config.get('bookmark_query_field', None),
-                bookmark_field=bookmark_field,
-                bookmark_type=endpoint_config.get('bookmark_type', None),
-                data_key=endpoint_config.get('data_key', stream_name),
-                id_fields=endpoint_config.get('key_properties'),
-                selected_streams=selected_streams,
-                replication_ind=replication_ind)
-
-            update_currently_syncing(state, None)
-            LOGGER.info('FINISHED Syncing: {}, total_records: {}'.format(
-                stream_name,
-                total_records))
