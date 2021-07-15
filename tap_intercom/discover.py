@@ -1,27 +1,47 @@
-from singer import metadata
-from singer.catalog import Catalog, CatalogEntry, Schema
+from singer.catalog import Catalog
 from tap_intercom.schema import get_schemas
-from tap_intercom.streams import flatten_streams
+
+
+def _get_key_properties_from_meta(schema_meta: list) -> str:
+    """
+    Gets the table-key-properties from the schema metadata.
+    """
+    return schema_meta[0].get('metadata').get('table-key-properties')
+
+def _get_replication_method_from_meta(schema_meta: list) -> str:
+    """
+    Gets the forced-replication-method from the schema metadata.
+    """
+    return schema_meta[0].get('metadata').get('forced-replication-method')
+
+def _get_replication_key_from_meta(schema_meta: list) -> str:
+    """
+    Gets the valid-replication-keys from the schema metadata.
+    """
+    if _get_replication_method_from_meta(schema_meta) == 'INCREMENTAL':
+        return schema_meta[0].get('metadata').get('valid-replication-keys')[0]
+    return None
 
 def discover():
+    """
+    Constructs a singer Catalog object based on the schemas and metadata.
+    """
     schemas, field_metadata = get_schemas()
-    catalog = Catalog([])
+    streams = []
 
-    flat_streams = flatten_streams()
-    for stream_name, schema_dict in schemas.items():
-        schema = Schema.from_dict(schema_dict)
-        mdata = metadata.to_map(field_metadata[stream_name])
+    for schema_name, schema in schemas.items():
+        schema_meta = field_metadata[schema_name]
 
-        stream = flat_streams.get(stream_name, {})
-        if stream.get('replication_method') == 'INCREMENTAL':
-            for field_name in stream.get('replication_keys'):
-                metadata.write(mdata, ('properties', field_name), 'inclusion', 'automatic')
-        catalog.streams.append(CatalogEntry(
-            stream=stream_name,
-            tap_stream_id=stream_name,
-            key_properties=stream.get('key_properties', None),
-            schema=schema,
-            metadata=metadata.to_list(mdata)
-        ))
+        catalog_entry = {
+            'stream': schema_name,
+            'tap_stream_id': schema_name,
+            'schema': schema,
+            'key_properties': _get_key_properties_from_meta(schema_meta),
+            'replication_method': _get_replication_method_from_meta(schema_meta),
+            'replication_key': _get_replication_key_from_meta(schema_meta),
+            'metadata': schema_meta
+        }
 
-    return catalog
+        streams.append(catalog_entry)
+
+    return Catalog.from_dict({'streams': streams})
