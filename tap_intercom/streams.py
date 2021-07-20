@@ -4,9 +4,7 @@ This module defines the stream classes and their individual sync logic.
 
 
 import datetime
-from functools import lru_cache
-from typing import Any, Iterator
-from pytz import UTC
+from typing import Iterator
 
 import singer
 from singer import Transformer, metrics, UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING
@@ -16,6 +14,8 @@ from tap_intercom.client import (IntercomClient, IntercomError)
 from tap_intercom.transform import (transform_json, transform_times, find_datetimes_in_schema)
 
 LOGGER = singer.get_logger()
+
+MAX_PAGE_SIZE = 150
 
 
 class BaseStream:
@@ -65,7 +65,7 @@ class BaseStream:
 
     @staticmethod
     def epoch_milliseconds_to_dt_str(timestamp: float) -> str:
-        dt_object = datetime.datetime.fromtimestamp(timestamp / 1000)
+        dt_object = datetime.datetime.fromtimestamp(timestamp / 1000.0)
         return dt_object.isoformat()
 
     @staticmethod
@@ -112,12 +112,12 @@ class IncrementalStream(BaseStream):
         with metrics.record_counter(self.tap_stream_id) as counter:
             for record in self.get_records(bookmark_datetime):
                 transform_times(record, schema_datetimes)
-                          
+
                 record_datetime = singer.utils.strptime_to_utc(
                     self.epoch_milliseconds_to_dt_str(
                         record[self.replication_key])
                     )
-                
+
                 if record_datetime >= bookmark_datetime:
                     transformed_record = transform(record,
                                                     stream_schema,
@@ -133,6 +133,7 @@ class IncrementalStream(BaseStream):
                                       self.replication_key,
                                       bookmark_date)
         return state
+
 
 # pylint: disable=abstract-method
 class FullTableStream(BaseStream):
@@ -269,15 +270,25 @@ class CompanyAttributes(FullTableStream):
     data_key = 'data'
 
     def get_records(self, bookmark_datetime=None, is_parent=False) -> Iterator[list]:
-        response = self.client.get(self.path, params=self.params)
+        paging = True
+        next_page = None
 
-        yield from response.get(self.data_key, [])
+        while paging:
+            response = self.client.get(self.path, url=next_page, params=self.params)
+
+            if 'pages' in response and response.get('pages', {}).get('next'):
+                next_page = response.get('pages', {}).get('next')
+                self.path = None
+            else:
+                paging = False
+
+            yield from response.get(self.data_key,  [])
 
 
 class CompnaySegments(FullTableStream):
     """
     Retrieve company segments
-    
+
     Docs: https://developers.intercom.com/intercom-api-reference/v2.0/reference#list-segments
     """
     tap_stream_id = 'company_segments'
@@ -309,7 +320,7 @@ class CompnaySegments(FullTableStream):
 
 class Conversations(FullTableStream):
     """
-    Retrieve conversations 
+    Retrieve conversations
 
     Docs: https://developers.intercom.com/intercom-api-reference/v2.0/reference#list-conversations
     """
@@ -331,6 +342,10 @@ class Conversations(FullTableStream):
 
         while paging:
             response = self.client.get(self.path, url=next_page, params=self.params)
+
+            if not response.get(self.data_key):
+                LOGGER.critical('response is empty for {} stream'.format(self.tap_stream_id))
+                raise IntercomError
 
             if 'pages' in response and response.get('pages', {}).get('next'):
                 next_page = response.get('pages', {}).get('next')
@@ -380,7 +395,7 @@ class ConversationParts(Conversations):
 class ContactAttributes(FullTableStream):
     """
     Retrieve contact attributes
-    
+
     Docs: https://developers.intercom.com/intercom-api-reference/v2.0/reference#list-data-attributes
     """
     tap_stream_id = 'contact_attributes'
@@ -392,9 +407,19 @@ class ContactAttributes(FullTableStream):
     data_key = 'data'
 
     def get_records(self, bookmark_datetime=None, is_parent=False) -> Iterator[list]:
-        response = self.client.get(self.path, params=self.params)
+        paging = True
+        next_page = None
 
-        yield from response.get(self.data_key, []) 
+        while paging:
+            response = self.client.get(self.path, url=next_page, params=self.params)
+
+            if 'pages' in response and response.get('pages', {}).get('next'):
+                next_page = response.get('pages', {}).get('next')
+                self.path = None
+            else:
+                paging = False
+
+            yield from response.get(self.data_key,  [])
 
 
 class Contacts(IncrementalStream):
@@ -409,39 +434,41 @@ class Contacts(IncrementalStream):
     replication_key = 'updated_at'
     valid_replication_keys = ['updated_at']
     data_key = 'data'
+    per_page = MAX_PAGE_SIZE
+
 
     def get_records(self, bookmark_datetime=None, is_parent=False) -> Iterator[list]:
         paging = True
         starting_after = None
-        params = {
-            'per_page': 25 # TODO: add as part of config??
-        }
         search_query = {
+            'pagination': {
+                'per_page': self.per_page
+            },
             'query': {
                 'operator': 'OR',
                 'value': [{
-                    'field': 'updated_at',
+                    'field': self.replication_key,
                     'operator': '>',
                     'value': self.dt_to_epoch_seconds(bookmark_datetime)
                     },
                     {
-                    'field': 'updated_at',
+                    'field': self.replication_key,
                     'operator': '=',
                     'value': self.dt_to_epoch_seconds(bookmark_datetime)
                     }]
                 },
             'sort': {
-                'field': 'updated_at',
+                'field': self.replication_key,
                 'order': 'ascending'
                 }
         }
 
         while paging:
-            response = self.client.post(self.path, params=params, json=search_query)
+            response = self.client.post(self.path, json=search_query)
 
             if 'pages' in response and response.get('pages', {}).get('next'):
                 starting_after = response.get('pages').get('next').get('starting_after')
-                params.update({'starting_after': starting_after})
+                search_query['pagination'].update({'starting_after': starting_after})
             else:
                 paging = False
 
@@ -453,7 +480,7 @@ class Contacts(IncrementalStream):
 class Segments(FullTableStream):
     """
     Retrieve segments
-    
+
     Docs: https://developers.intercom.com/intercom-api-reference/v2.0/reference#list-segments
     """
     tap_stream_id = 'segments'
@@ -479,14 +506,14 @@ class Segments(FullTableStream):
             else:
                 paging = False
 
-            yield from response.get(self.data_key)
+            yield from response.get(self.data_key,  [])
 
 
 class Tags(FullTableStream):
     """
     Retrieve tags
 
-    Docs: https://developers.intercom.com/intercom-api-reference/v2.0/reference#list-tags-for-an-app    
+    Docs: https://developers.intercom.com/intercom-api-reference/v2.0/reference#list-tags-for-an-app
     """
     tap_stream_id = 'tags'
     key_properties =['id']
@@ -494,9 +521,19 @@ class Tags(FullTableStream):
     data_key = 'data'
 
     def get_records(self, bookmark_datetime=None, is_parent=False) -> Iterator[list]:
-        response = self.client.get(self.path)
+        paging = True
+        next_page = None
 
-        yield from response.get(self.data_key, [])
+        while paging:
+            response = self.client.get(self.path, url=next_page, params=self.params)
+
+            if 'pages' in response and response.get('pages', {}).get('next'):
+                next_page = response.get('pages', {}).get('next')
+                self.path = None
+            else:
+                paging = False
+
+            yield from response.get(self.data_key,  [])
 
 
 class Teams(FullTableStream):
@@ -511,9 +548,19 @@ class Teams(FullTableStream):
     data_key = 'teams'
 
     def get_records(self, bookmark_datetime=None, is_parent=False) -> Iterator[list]:
-        response = self.client.get(self.path)
+        paging = True
+        next_page = None
 
-        yield from response.get(self.data_key, [])
+        while paging:
+            response = self.client.get(self.path, url=next_page, params=self.params)
+
+            if 'pages' in response and response.get('pages', {}).get('next'):
+                next_page = response.get('pages', {}).get('next')
+                self.path = None
+            else:
+                paging = False
+
+            yield from response.get(self.data_key,  [])
 
 
 STREAMS = {
