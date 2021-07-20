@@ -3,49 +3,6 @@ This module defines the stream classes and their individual sync logic.
 """
 
 
-<<<<<<< HEAD
-STREAMS = {
-    'admin_list': {
-        'path': 'admins',
-        'data_key': 'admins',
-        'key_properties': ['id'],
-        'replication_method': 'FULL_TABLE',
-        'replication_ind': False,  # DO NOT REPLICATE PARENT
-        'children': {
-            'admins': {
-                'path': 'admins/{}',  # ONLY REPLICATE CHILD (admin details)
-                'key_properties': ['id'],
-                'replication_method': 'FULL_TABLE'
-            }
-        }
-    },
-    'companies': {
-        'key_properties': ['id'],
-        'replication_method': 'FULL_TABLE', # Scroll API does not support incremental replication
-        'bookmark_type': 'datetime',
-        'scroll_type': 'always',
-        'data_key': 'data'
-    },
-    'company_attributes': {
-        'path': 'data_attributes',
-        'data_key': 'data',  # change to `data` in API v.2.0
-        'key_properties': ['name'],
-        'replication_method': 'FULL_TABLE',
-        'params': {
-            'model': 'company'
-        }
-    },
-    'company_segments': {
-        'path': 'segments',
-        'data_key': 'segments',
-        'key_properties': ['id'],
-        'replication_method': 'INCREMENTAL',
-        'replication_keys': ['updated_at'],
-        'bookmark_type': 'datetime',
-        'params': {
-            'type': 'company',
-            'include_count': 'true'
-=======
 import datetime
 from typing import Iterator
 
@@ -342,7 +299,6 @@ class CompnaySegments(FullTableStream):
     params = {
         'type': 'company',
         'include_count': 'true'
->>>>>>> aab150a (changes to streams.py)
         }
     data_key = 'segments'
 
