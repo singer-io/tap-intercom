@@ -294,8 +294,6 @@ class CompnaySegments(FullTableStream):
     tap_stream_id = 'company_segments'
     key_properties = ['id']
     path = 'segments'
-    replication_key = 'updated_at'
-    valid_replication_keys = ['updated_at']
     params = {
         'type': 'company',
         'include_count': 'true'
@@ -327,8 +325,6 @@ class Conversations(FullTableStream):
     tap_stream_id = 'conversations'
     key_properties = ['id']
     path = 'conversations'
-    replication_key = 'updated_at'
-    valid_replication_keys = ['updated_at']
     params = {
         'sort': 'updated_at',
         'order': 'asc',
@@ -486,8 +482,6 @@ class Segments(FullTableStream):
     tap_stream_id = 'segments'
     key_properties = ['id']
     path = 'segments'
-    replication_key = 'updated_at'
-    valid_replication_keys = ['updated_at']
     params = {
         'include_count': 'true'
         }
