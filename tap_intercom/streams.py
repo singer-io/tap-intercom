@@ -316,36 +316,47 @@ class CompnaySegments(FullTableStream):
             yield from response.get(self.data_key)
 
 
-class Conversations(FullTableStream):
+class Conversations(IncrementalStream):
     """
     Retrieve conversations
 
-    Docs: https://developers.intercom.com/intercom-api-reference/v2.0/reference#list-conversations
+    Docs: https://developers.intercom.com/intercom-api-reference/v2.0/reference#search-for-conversations
     """
     tap_stream_id = 'conversations'
     key_properties = ['id']
-    path = 'conversations'
+    path = 'conversations/search'
+    replication_key = 'updated_at'
+    valid_replication_keys = ['updated_at']
     params = {
-        'sort': 'updated_at',
-        'order': 'asc',
         'display_as': 'plaintext'
         }
     data_key = 'conversations'
+    per_page = MAX_PAGE_SIZE
 
     def get_records(self, bookmark_datetime=None, is_parent=False) -> Iterator[list]:
         paging = True
-        next_page = None
+        starting_after = None
+        search_query = {
+            'pagination': {
+                'per_page': self.per_page
+            },
+            "query": {
+                "field": self.replication_key,
+                "operator": ">",
+                "value": self.dt_to_epoch_seconds(bookmark_datetime)
+            },
+            "sort": {
+                "field": self.replication_key,
+                "order": "ascending"
+            }
+        }
 
         while paging:
-            response = self.client.get(self.path, url=next_page, params=self.params)
-
-            if not response.get(self.data_key):
-                LOGGER.critical('response is empty for {} stream'.format(self.tap_stream_id))
-                raise IntercomError
+            response = self.client.post(self.path, json=search_query)
 
             if 'pages' in response and response.get('pages', {}).get('next'):
-                next_page = response.get('pages', {}).get('next')
-                self.path = None
+                starting_after = response.get('pages').get('next').get('starting_after')
+                search_query['pagination'].update({'starting_after': starting_after})
             else:
                 paging = False
 
@@ -375,7 +386,7 @@ class ConversationParts(Conversations):
 
     def get_records(self, bookmark_datetime=None, is_parent=False) -> Iterator[list]:
         results = []
-        for record in self.get_parent_data():
+        for record in self.get_parent_data(bookmark_datetime):
             call_path = self.path.format(record)
             response = self.client.get(call_path, params=self.params)
 

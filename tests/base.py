@@ -80,11 +80,13 @@ class IntercomBaseTest(unittest.TestCase):
             },
             "conversations": {
                 self.PRIMARY_KEYS: {"id"},
-                self.REPLICATION_METHOD: self.FULL_TABLE,
+                self.REPLICATION_METHOD: self.INCREMENTAL,
+                self.REPLICATION_KEYS: {"updated_at"}
             },
             "conversation_parts": {
                 self.PRIMARY_KEYS: {"id"},
-                self.REPLICATION_METHOD: self.FULL_TABLE
+                self.REPLICATION_METHOD: self.INCREMENTAL,
+                self.REPLICATION_KEYS: {"updated_at"}
             },
             "contact_attributes": {
                 self.PRIMARY_KEYS: {"name"},
