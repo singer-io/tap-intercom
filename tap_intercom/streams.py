@@ -285,7 +285,7 @@ class CompanyAttributes(FullTableStream):
             yield from response.get(self.data_key,  [])
 
 
-class CompnaySegments(FullTableStream):
+class CompnaySegments(IncrementalStream):
     """
     Retrieve company segments
 
@@ -294,6 +294,8 @@ class CompnaySegments(FullTableStream):
     tap_stream_id = 'company_segments'
     key_properties = ['id']
     path = 'segments'
+    replication_key = 'updated_at'
+    valid_replication_keys = ['updated_at']
     params = {
         'type': 'company',
         'include_count': 'true'
@@ -327,9 +329,7 @@ class Conversations(IncrementalStream):
     path = 'conversations/search'
     replication_key = 'updated_at'
     valid_replication_keys = ['updated_at']
-    params = {
-        'display_as': 'plaintext'
-        }
+    params = {'display_as': 'plaintext'}
     data_key = 'conversations'
     per_page = MAX_PAGE_SIZE
 
@@ -378,10 +378,10 @@ class ConversationParts(Conversations):
     tap_stream_id = 'conversation_parts'
     key_properties = ['id']
     path = 'conversations/{}'
+    replication_key = 'updated_at'
+    valid_replication_keys = ['updated_at']
     parent = Conversations
-    params = {
-        'display_as': 'plaintext'
-    }
+    params = {'display_as': 'plaintext'}
     data_key = 'conversations'
 
     def get_records(self, bookmark_datetime=None, is_parent=False) -> Iterator[list]:
@@ -408,9 +408,7 @@ class ContactAttributes(FullTableStream):
     tap_stream_id = 'contact_attributes'
     key_properties = ['name']
     path = 'data_attributes'
-    params = {
-        'model': 'contact'
-    }
+    params = {'model': 'contact'}
     data_key = 'data'
 
     def get_records(self, bookmark_datetime=None, is_parent=False) -> Iterator[list]:
@@ -484,7 +482,7 @@ class Contacts(IncrementalStream):
             yield from records
 
 
-class Segments(FullTableStream):
+class Segments(IncrementalStream):
     """
     Retrieve segments
 
@@ -493,9 +491,9 @@ class Segments(FullTableStream):
     tap_stream_id = 'segments'
     key_properties = ['id']
     path = 'segments'
-    params = {
-        'include_count': 'true'
-        }
+    replication_key = 'updated_at'
+    valid_replication_keys = ['updated_at']
+    params = {'include_count': 'true'}
     data_key = 'segments'
 
     def get_records(self, bookmark_datetime=None, is_parent=False) -> Iterator[list]:

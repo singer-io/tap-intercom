@@ -76,7 +76,8 @@ class IntercomBaseTest(unittest.TestCase):
             },
             "company_segments": {
                 self.PRIMARY_KEYS: {"id", },
-                self.REPLICATION_METHOD: self.FULL_TABLE,
+                self.REPLICATION_METHOD: self.INCREMENTAL,
+                self.REPLICATION_KEYS: {"updated_at"}
             },
             "conversations": {
                 self.PRIMARY_KEYS: {"id"},
@@ -99,7 +100,8 @@ class IntercomBaseTest(unittest.TestCase):
             },
             "segments": {
                 self.PRIMARY_KEYS: {"id"},
-                self.REPLICATION_METHOD: self.FULL_TABLE,
+                self.REPLICATION_METHOD: self.INCREMENTAL,
+                self.REPLICATION_KEYS: {"updated_at"}
             },
             "tags": {
                 self.PRIMARY_KEYS: {'id'},
