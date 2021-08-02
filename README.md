@@ -9,6 +9,7 @@ This tap:
 - Pulls raw data from the [Intercom v1.4 API](https://developers.intercom.com/intercom-api-reference/reference#introduction)
 - Extracts the following resources:
   - [Admins](https://developers.intercom.com/intercom-api-reference/reference#list-admins)
+  - [Admins Activity Logs](https://developers.intercom.com/intercom-api-reference/reference#view-admin-activity-logs)
   - [Companies](https://developers.intercom.com/intercom-api-reference/reference#list-companies)
   - [Conversations](https://developers.intercom.com/intercom-api-reference/reference#list-conversations)
     - [Conversation Parts](https://developers.intercom.com/intercom-api-reference/reference#get-a-single-conversation)
@@ -32,6 +33,15 @@ This tap:
 - Primary key fields: id
 - Foreign key fields: team_ids
 - Replication strategy: FULL_TABLE
+- Transformations: none
+
+[admins_activity_logs](https://developers.intercom.com/intercom-api-reference/reference#view-admin-activity-logs)
+- Endpoint: https://api.intercom.io/admins/activity_logs
+- Primary key fields: id
+- Foreign key fields: performed_by > id
+- Replication strategy: INCREMENTAL
+  - Bookmark: created_at (date-time)
+  - Bookmark query field: created_at_after
 - Transformations: none
 
 [companies](https://developers.intercom.com/intercom-api-reference/reference#list-companies)

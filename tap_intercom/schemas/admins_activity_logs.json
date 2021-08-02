@@ -1,0 +1,41 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": ["null", "string"]
+    },
+    "activity_type": {
+      "type": ["null", "string"]
+    },
+    "activity_description": {
+      "type": ["null", "string"]
+    },
+    "created_at": {
+      "type": ["null", "string"],
+      "format": "date-time"
+    },
+    "metadata": {
+      "type": ["null", "object"],
+      "additionalProperties": true
+    },
+    "performed_by": {
+      "type": ["null", "object"],
+      "additionalProperties": false,
+      "properties": {
+        "type" : {
+          "type":  ["null", "string"]
+        },
+        "id" : {
+          "type":  ["null", "string"]
+        },
+        "ip" : {
+          "type":  ["null", "string"]
+        },
+        "email" : {
+          "type":  ["null", "string"]
+        }
+      }
+    }
+  }
+}

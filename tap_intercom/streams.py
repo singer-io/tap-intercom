@@ -15,6 +15,7 @@
 #   scroll_type: always, historical, or never; default never
 #   interpolate_page: True, False (to determine start page based on total pages and bookmark)
 #       default: False
+#   bookmark_query_field_to_epoch: True, False (convert datetime bookmark to epoch upon query)
 
 def build_query(body, value, starting_after=None):
     # Update both the > and the = queries with our bookmark
@@ -153,6 +154,16 @@ STREAMS = {
     'teams': {
         'key_properties': ['id'],
         'replication_method': 'FULL_TABLE'
+    },
+    'admins_activity_logs': {
+        'key_properties': ['id'],
+        'replication_method': 'INCREMENTAL',
+        'replication_keys': ['created_at'],
+        'bookmark_type': 'datetime',
+        'data_key': 'activity_logs',
+        'path': 'admins/activity_logs',
+        'bookmark_query_field': 'created_at_after',
+        'bookmark_query_field_to_epoch': True
     },
 }
 
