@@ -2,38 +2,17 @@
   "type": "object",
   "additionalProperties": false,
   "properties": {
-    "assignee": {
+    "admin_assignee_id": {
       "type": [
         "null",
-        "object"
-      ],
-      "additionalProperties": false,
-      "properties": {
-        "id": {
-          "type": [
-            "null",
-            "string"
-          ]
-        },
-        "type": {
-          "type": [
-            "null",
-            "string"
-          ]
-        },
-        "name": {
-          "type": [
-            "null",
-            "string"
-          ]
-        },
-        "email": {
-          "type": [
-            "null",
-            "string"
-          ]
-        }
-      }
+        "string"
+      ]
+    },
+    "team_assignee_id": {
+      "type": [
+        "null",
+        "string"
+      ]
     },
     "source": {
       "type": [
