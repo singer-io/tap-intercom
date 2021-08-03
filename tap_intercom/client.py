@@ -6,7 +6,7 @@ import singer
 
 LOGGER = singer.get_logger()
 
-API_VERSION = '2.0'
+API_VERSION = '2.3'
 
 
 class Server5xxError(Exception):
