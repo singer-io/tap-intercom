@@ -39,7 +39,7 @@ def transform_conversation_parts(this_json, data_key):
 # Run other transforms, as needed: denest_list_nodes, transform_conversation_parts
 def transform_json(this_json, stream_name, data_key):
     new_json = this_json
-    if stream_name in ('users', 'leads'): # change 'leads' to 'contacts' for API v.2.0
+    if stream_name in ('users', 'contacts'): # change 'leads' to 'contacts' for API v.2.0
         list_nodes = ['companies', 'segments', 'social_profiles', 'tags']
         denested_json = denest_list_nodes(new_json, data_key, list_nodes)
         new_json = denested_json
