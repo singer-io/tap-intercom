@@ -4,12 +4,13 @@ from singer.utils import strptime_to_utc
 
 
 # De-nest each list node up to record level
-def denest_list_nodes(this_json, data_key, list_nodes):
+def denest_list_nodes(this_json, data_key, list_nodes, addressable_list=False):
     new_json = this_json
     i = 0
     for record in list(this_json.get(data_key, [])):
         for list_node in list_nodes:
-            this_node = record.get(list_node, {}).get(list_node, [])
+            field = data_key if addressable_list else list_node
+            this_node = record.get(list_node, {}).get(field, [])
             if not this_node == []:
                 new_json[data_key][i][list_node] = this_node
             else:
@@ -40,9 +41,13 @@ def transform_conversation_parts(this_json, data_key):
 def transform_json(this_json, stream_name, data_key):
     new_json = this_json
     if stream_name in ('users', 'contacts'): # change 'leads' to 'contacts' for API v.2.0
-        list_nodes = ['companies', 'segments', 'social_profiles', 'tags']
+        list_nodes = ['segments', 'social_profiles']
         denested_json = denest_list_nodes(new_json, data_key, list_nodes)
-        new_json = denested_json
+        adressable_list_nodes = ['companies', 'notes', 'tags']
+        denested_adressable_list_json = denest_list_nodes(
+            denested_json, data_key, adressable_list_nodes, True
+            )
+        new_json = denested_adressable_list_json
     elif stream_name == 'companies':
         list_nodes = ['segments', 'tags']
         denested_json = denest_list_nodes(new_json, data_key, list_nodes)
@@ -99,7 +104,7 @@ def get_integer_places(value):
 def nested_get(dic, keys):
     for key in keys:
         if isinstance(key, list):
-            dic = [elem[key[0]] for elem in dic]
+            dic = [elem[key[0]] for elem in dic if key[0] in elem]
         elif dic and key in dic:
             dic = dic[key]
         else:
@@ -125,7 +130,7 @@ def transform_times(record, schema_datetimes):
     for datetime_path in schema_datetimes:
         datetime = nested_get(record, datetime_path)
 
-        if isinstance(datetime, list):
+        if datetime and isinstance(datetime, list):
             nested_set(record, datetime_path, [dt * 1000 for dt in datetime])
         elif datetime and isinstance(datetime, str):
             converted_ts = strptime_to_utc(datetime).timestamp() * 1000
