@@ -5,6 +5,7 @@ This module defines the stream classes and their individual sync logic.
 
 import datetime
 from typing import Iterator
+from copy import deepcopy
 
 import singer
 from singer import Transformer, metrics, UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING
@@ -440,7 +441,41 @@ class Contacts(IncrementalStream):
     valid_replication_keys = ['updated_at']
     data_key = 'data'
     per_page = MAX_PAGE_SIZE
+    addressable_list_fields = ['tags', 'notes', 'companies']
 
+
+    def get_addressable_list(self, contact_list: dict) -> dict:
+        params = {
+            'display_as': 'plaintext',
+            'per_page': 60 # addressable_list endpoints seem to have a different max page size
+        }
+
+        new_contact_list = deepcopy(contact_list)
+
+        for index, record in enumerate(new_contact_list.get(self.data_key)):
+            for field, value in record.items():
+                if field in self.addressable_list_fields and value.get('total_count', 0) > 0:
+                    # clear out `data` array
+                    new_contact_list[self.data_key][index][field][self.data_key] = []
+
+                    paging = True
+                    next_page = None
+                    endpoint = value.get('url')
+
+                    while paging:
+                        response = self.client.get(endpoint, url=next_page, params=params)
+
+                        if 'pages' in response and response.get('pages', {}).get('next'):
+                            next_page = response.get('pages', {}).get('next')
+                            endpoint = None
+                        else:
+                            paging = False
+
+                        new_value = response.get(self.data_key, [])
+
+                        new_contact_list[self.data_key][index][field][self.data_key].extend(new_value)
+
+        return new_contact_list
 
     def get_records(self, bookmark_datetime=None, is_parent=False) -> Iterator[list]:
         paging = True
@@ -476,6 +511,9 @@ class Contacts(IncrementalStream):
                 search_query['pagination'].update({'starting_after': starting_after})
             else:
                 paging = False
+
+            # check each contact for any `has_more: true` in each addressable-list object (tags, notes, companies)
+            response = self.get_addressable_list(response)
 
             records = transform_json(response, self.tap_stream_id, self.data_key)
 
