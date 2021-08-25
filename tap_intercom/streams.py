@@ -308,7 +308,7 @@ class CompnaySegments(IncrementalStream):
         }
     data_key = 'segments'
 
-    def get_records(self, bookmark_datetime=None, is_parent=False) -> Iterator[list]:
+    def get_records(self, bookmark_datetime=None, is_parent=False, metadata=None) -> Iterator[list]:
         paging = True
         next_page = None
 
@@ -339,7 +339,7 @@ class Conversations(IncrementalStream):
     data_key = 'conversations'
     per_page = MAX_PAGE_SIZE
 
-    def get_records(self, bookmark_datetime=None, is_parent=False) -> Iterator[list]:
+    def get_records(self, bookmark_datetime=None, is_parent=False, metadata=None) -> Iterator[list]:
         paging = True
         starting_after = None
         search_query = {
@@ -390,7 +390,7 @@ class ConversationParts(Conversations):
     params = {'display_as': 'plaintext'}
     data_key = 'conversations'
 
-    def get_records(self, bookmark_datetime=None, is_parent=False) -> Iterator[list]:
+    def get_records(self, bookmark_datetime=None, is_parent=False, metadata=None) -> Iterator[list]:
         results = []
         for record in self.get_parent_data(bookmark_datetime):
             call_path = self.path.format(record)
@@ -543,7 +543,7 @@ class Segments(IncrementalStream):
     params = {'include_count': 'true'}
     data_key = 'segments'
 
-    def get_records(self, bookmark_datetime=None, is_parent=False) -> Iterator[list]:
+    def get_records(self, bookmark_datetime=None, is_parent=False, metadata=None) -> Iterator[list]:
         paging = True
         next_page = None
 
