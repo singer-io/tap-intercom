@@ -460,7 +460,7 @@ class Contacts(IncrementalStream):
         for index, record in enumerate(new_contact_list.get(self.data_key)):
             for field, value in record.items():
                 # check that field is part of addressable_list_fields, has records, and is selected for the stream
-                if (field in self.addressable_list_fields 
+                if (field in self.addressable_list_fields
                     and value.get('total_count', 0) > 0
                     and mdata.get(('properties', field), {}).get('selected')):
                     # clear out `data` array
@@ -486,7 +486,7 @@ class Contacts(IncrementalStream):
 
         return new_contact_list
 
-    def get_records(self, bookmark_datetime=None, is_parent=False, metadata={}) -> Iterator[list]:
+    def get_records(self, bookmark_datetime=None, is_parent=False, metadata=None) -> Iterator[list]:
         paging = True
         starting_after = None
         search_query = {
