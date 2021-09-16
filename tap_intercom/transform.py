@@ -39,7 +39,7 @@ def transform_conversation_parts(this_json, data_key):
 # Run other transforms, as needed: denest_list_nodes, transform_conversation_parts
 def transform_json(this_json, stream_name, data_key):
     new_json = this_json
-    if stream_name in ('users', 'leads'): # change 'leads' to 'contacts' for API v.2.0
+    if stream_name in ('users', 'contacts'): # change 'leads' to 'contacts' for API v.2.0
         list_nodes = ['companies', 'segments', 'social_profiles', 'tags']
         denested_json = denest_list_nodes(new_json, data_key, list_nodes)
         new_json = denested_json
@@ -73,6 +73,14 @@ def find_datetimes_in_schema(schema):
                 paths += [
                     [k] + x for x in find_datetimes_in_schema(v)
                 ]
+    if 'items' in schema and isinstance(schema, dict):
+        for k, v in schema.get('items').get('properties', {}).items(): #pylint: disable=invalid-name
+            if 'format' in v and v['format'] == 'date-time':
+                paths.append([[k]])
+            else:
+                paths += [
+                    [k] + x for x in find_datetimes_in_schema(v)
+                ]
     return paths
 
 
@@ -90,7 +98,9 @@ def get_integer_places(value):
 # Traverse dict by array of keys and return path's value
 def nested_get(dic, keys):
     for key in keys:
-        if dic and key in dic:
+        if isinstance(key, list):
+            dic = [elem[key[0]] for elem in dic]
+        elif dic and key in dic:
             dic = dic[key]
         else:
             return None
@@ -99,8 +109,14 @@ def nested_get(dic, keys):
 # Set nested value by arrray of keys as path
 def nested_set(dic, keys, value):
     for key in keys[:-1]:
-        dic = dic.setdefault(key, {})
-    dic[keys[-1]] = value
+        if not isinstance(dic[key], list):
+            dic = dic.setdefault(key, {})
+
+    if not isinstance(dic.get(keys[0], {}), list):
+        dic[keys[-1]] = value
+    else:
+        for index, _ in enumerate(dic.get(keys[0])):
+            dic[keys[0]][index][keys[-1][0]] = value[index]
 
 # API returns date times, epoch seconds and epoch millis
 # Transform datetimes to epoch millis
@@ -109,7 +125,9 @@ def transform_times(record, schema_datetimes):
     for datetime_path in schema_datetimes:
         datetime = nested_get(record, datetime_path)
 
-        if datetime and isinstance(datetime, str):
+        if isinstance(datetime, list):
+            nested_set(record, datetime_path, [dt * 1000 for dt in datetime])
+        elif datetime and isinstance(datetime, str):
             converted_ts = strptime_to_utc(datetime).timestamp() * 1000
             nested_set(record, datetime_path, converted_ts)
         elif datetime and get_integer_places(datetime) == 10:

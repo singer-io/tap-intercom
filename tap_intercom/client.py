@@ -24,6 +24,9 @@ class IntercomError(Exception):
 class IntercomBadRequestError(IntercomError):
     pass
 
+class IntercomScrollExistsError(IntercomError):
+    pass
+
 
 class IntercomUnauthorizedError(IntercomError):
     pass
@@ -86,10 +89,14 @@ ERROR_CODE_EXCEPTION_MAPPING = {
     409: IntercomUserConflictError,
     415: IntercomUnsupportedMediaTypeError,
     422: IntercomUnprocessableEntityError,
+    423: IntercomScrollExistsError,
     500: IntercomInternalServiceError}
 
 
-def get_exception_for_error_code(error_code):
+def get_exception_for_error_code(error_code, intercom_error_code):
+
+    if intercom_error_code == 'scroll_exists':
+        error_code = 423
     return ERROR_CODE_EXCEPTION_MAPPING.get(error_code, IntercomError)
 
 def raise_for_error(response):
@@ -112,7 +119,7 @@ def raise_for_error(response):
                 for err in response_json['errors']:
                     error_message = err.get('message')
                     error_code = err.get('code')
-                    ex = get_exception_for_error_code(status_code)
+                    ex = get_exception_for_error_code(error_code=status_code, intercom_error_code=error_code)
                     if status_code == 401 and 'access_token' in error_code:
                         LOGGER.error("Your API access_token is expired/invalid as per Intercom’s "\
                             "security policy. \n Please re-authenticate your connection to "\
@@ -172,7 +179,7 @@ class IntercomClient(object):
     # Rate limiting:
     #  https://developers.intercom.com/intercom-api-reference/reference#rate-limiting
     @backoff.on_exception(backoff.expo,
-                          (Server5xxError, ConnectionError, Server429Error),
+                          (Server5xxError, ConnectionError, Server429Error, IntercomScrollExistsError),
                           max_tries=7,
                           factor=3)
     @utils.ratelimit(1000, 60)
