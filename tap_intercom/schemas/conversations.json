@@ -776,8 +776,7 @@
       "type": [
         "null",
         "object"
-      ],
-      "additionalProperties": true
+      ]
     }
   }
 }
