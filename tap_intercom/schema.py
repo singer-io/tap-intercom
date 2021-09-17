@@ -24,7 +24,7 @@ def get_schemas():
         replication_ind = stream_object.to_replicate
         if replication_ind:
             schema_path = get_abs_path('schemas/{}.json'.format(stream_name))
-            with open(schema_path) as file:
+            with open(schema_path, encoding="utf-8") as file:
                 schema = json.load(file)
             schemas[stream_name] = schema
 
