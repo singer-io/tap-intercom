@@ -7,7 +7,7 @@ import datetime
 from typing import Iterator
 
 import singer
-from singer import Transformer, metrics, UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING
+from singer import metrics, UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING
 from singer.transform import transform
 
 from tap_intercom.client import (IntercomClient, IntercomError)
@@ -88,8 +88,7 @@ class IncrementalStream(BaseStream):
              state: dict,
              stream_schema: dict,
              stream_metadata: dict,
-             config: dict,
-             transformer: Transformer) -> dict:
+             config: dict) -> dict:
         """
         The sync logic for an incremental stream.
 
@@ -145,13 +144,12 @@ class FullTableStream(BaseStream):
     """
     replication_method = 'FULL_TABLE'
 
-    # pylint: disable=too-many-arguments
+    # pylint: disable=unused-argument
     def sync(self,
              state: dict,
              stream_schema: dict,
              stream_metadata: dict,
-             config: dict,
-             transformer: Transformer) -> dict:
+             config: dict) -> dict:
         """
         The sync logic for an full table stream.
 

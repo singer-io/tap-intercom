@@ -33,7 +33,7 @@ def sync(config, state, catalog):
                 stream.replication_key
             )
 
-            state = stream_obj.sync(state, stream_schema, stream_metadata, config, transformer)
+            state = stream_obj.sync(state, stream_schema, stream_metadata, config)
             singer.write_state(state)
 
     state = singer.set_currently_syncing(state, None)
