@@ -11,16 +11,17 @@ jobs:
             python3 -mvenv /usr/local/share/virtualenvs/tap-intercom
             source /usr/local/share/virtualenvs/tap-intercom/bin/activate
             pip install .[dev]
+            pip install coverage
       - run:
           name: 'pylint'
           command: |
             source /usr/local/share/virtualenvs/tap-intercom/bin/activate
-            make test
+            pylint tap_intercom --disable missing-docstring,logging-format-interpolation,no-member,no-self-use,arguments-differ,too-few-public-methods,line-too-long,too-many-arguments,too-many-locals,useless-object-inheritance,simplifiable-if-statement,protected-access,chained-comparison,inconsistent-return-statements,redefined-builtin,too-many-statements,too-many-nested-blocks,unused-variable,no-else-return,consider-using-f-string,unspecified-encoding
       - run:
           name: 'Unit Tests'
           command: |
             source /usr/local/share/virtualenvs/tap-intercom/bin/activate
-            nosetests tests/unittests/
+            nosetests --with-coverage --cover-erase --cover-package=tap_intercom --cover-html-dir=htmlcov tests/unittests/
       - add_ssh_keys
       - run:
           name: 'Integration Tests'

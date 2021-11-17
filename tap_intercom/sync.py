@@ -12,7 +12,7 @@ def sync(config, state, catalog):
     """ Sync data from tap source """
 
     access_token = config.get('access_token')
-    client = IntercomClient(access_token, config.get('user_agent'))
+    client = IntercomClient(access_token, config.get('request_timeout'), config.get('user_agent')) # pass request_timeout parameter from config
 
     with Transformer() as transformer:
         for stream in catalog.get_selected_streams(state):

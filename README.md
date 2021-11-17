@@ -152,12 +152,13 @@ reference#list-customer-data-attributes)
     - [singer-tools](https://github.com/singer-io/singer-tools)
     - [target-stitch](https://github.com/singer-io/target-stitch)
 
-3. Create your tap's `config.json` file. Intercom [Authentication Types](https://developers.intercom.com/building-apps/docs/authentication-types) explains how to get an `access_token`. Make sure your [OAuth Scope](https://developers.intercom.com/building-apps/docs/oauth-scopes) allows Read access to the endpoints above. Additionally, your App should use [API Version ](https://developers.intercom.com/building-apps/docs/update-your-api-version) **[v1.4](https://developers.intercom.com/intercom-api-reference/v1.4/reference)**.
+3. Create your tap's `config.json` file. Intercom [Authentication Types](https://developers.intercom.com/building-apps/docs/authentication-types) explains how to get an `access_token`. Make sure your [OAuth Scope](https://developers.intercom.com/building-apps/docs/oauth-scopes) allows Read access to the endpoints above. Additionally, your App should use [API Version ](https://developers.intercom.com/building-apps/docs/update-your-api-version) **[v1.4](https://developers.intercom.com/intercom-api-reference/v1.4/reference)**. `request_timeout` is the time for which request should wait to get response. It is an optional parameter and default request_timeout is 300 seconds.
 
     ```json
     {
         "access_token": "YOUR_API_ACCESS_TOKEN",
         "start_date": "2019-01-01T00:00:00Z",
+        "request_timeout": 300,
         "user_agent": "tap-intercom <api_user_email@your_company.com>"
     }
     ```

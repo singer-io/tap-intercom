@@ -1,6 +1,6 @@
 import backoff
 import requests
-from requests.exceptions import ConnectionError
+from requests.exceptions import ConnectionError, Timeout
 from singer import metrics, utils
 import singer
 
@@ -8,6 +8,7 @@ LOGGER = singer.get_logger()
 
 API_VERSION = '2.0'
 
+REQUEST_TIMEOUT = 300
 
 class Server5xxError(Exception):
     pass
@@ -134,6 +135,7 @@ def raise_for_error(response):
 class IntercomClient(object):
     def __init__(self,
                  access_token,
+                 config_request_timeout, # request_timeout parameter
                  user_agent=None):
         self.__access_token = access_token
         self.__user_agent = user_agent
@@ -142,6 +144,17 @@ class IntercomClient(object):
         self.__verified = False
         self.base_url = 'https://api.intercom.io'
 
+        # Set request timeout to config param `request_timeout` value.
+        # If value is 0,"0","" or not passed then it set default to 300 seconds.
+        if config_request_timeout and float(config_request_timeout):
+            self.__request_timeout = float(config_request_timeout)
+        else:
+            self.__request_timeout = REQUEST_TIMEOUT
+
+    # `check_access_token` may throw timeout error. `request` method also call `check_access_token`.
+    # So, to add backoff over `check_access_token` may cause 5*5 = 25 times backoff which is not expected.
+    # That's why added backoff here.
+    @backoff.on_exception(backoff.expo, Timeout, max_tries=5, factor=2)
     def __enter__(self):
         self.__verified = self.check_access_token()
         return self
@@ -166,6 +179,7 @@ class IntercomClient(object):
         response = self.__session.get(
             # Simple endpoint that returns 1 Account record (to check API/access_token access):
             url='{}/{}'.format(self.base_url, 'tags'),
+            timeout=self.__request_timeout, # Pass request timeout
             headers=headers)
         if response.status_code != 200:
             LOGGER.error('Error status_code = {}'.format(response.status_code))
@@ -178,6 +192,7 @@ class IntercomClient(object):
 
     # Rate limiting:
     #  https://developers.intercom.com/intercom-api-reference/reference#rate-limiting
+    @backoff.on_exception(backoff.expo,Timeout, max_tries=5, factor=2) # Backoff for request timeout
     @backoff.on_exception(backoff.expo,
                           (Server5xxError, ConnectionError, Server429Error, IntercomScrollExistsError),
                           max_tries=7,
@@ -209,7 +224,7 @@ class IntercomClient(object):
             kwargs['headers']['Content-Type'] = 'application/json'
 
         with metrics.http_request_timer(endpoint) as timer:
-            response = self.__session.request(method, url, **kwargs)
+            response = self.__session.request(method, url, timeout=self.__request_timeout, **kwargs) # Pass request timeout
             timer.tags[metrics.Tag.http_status_code] = response.status_code
 
         if response.status_code >= 500:

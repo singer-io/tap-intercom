@@ -83,7 +83,9 @@ class IncrementalStream(BaseStream):
     """
     replication_method = 'INCREMENTAL'
 
-    # pylint: disable=too-many-arguments
+    # Disabled `unused-argument` as it causing pylint error.
+    # Method which call this `sync` method is passing unused argument.So, removing argument would not work.
+    # pylint: disable=too-many-arguments,unused-argument
     def sync(self,
              state: dict,
              stream_schema: dict,
@@ -145,7 +147,9 @@ class FullTableStream(BaseStream):
     """
     replication_method = 'FULL_TABLE'
 
-    # pylint: disable=too-many-arguments
+    # Disabled `unused-argument` as it causing pylint error.
+    # Method which call this `sync` method is passing unused argument. So, removing argument would not work.
+    # pylint: disable=too-many-arguments,unused-argument
     def sync(self,
              state: dict,
              stream_schema: dict,
