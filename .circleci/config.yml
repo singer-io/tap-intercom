@@ -22,6 +22,7 @@ jobs:
           command: |
             source /usr/local/share/virtualenvs/tap-intercom/bin/activate
             nosetests --with-coverage --cover-erase --cover-package=tap_intercom --cover-html-dir=htmlcov tests/unittests/
+            coverage html
       - store_test_results:
           path: test_output/report.xml
       - store_artifacts:
