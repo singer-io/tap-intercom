@@ -192,7 +192,7 @@ class IntercomClient(object):
 
     # Rate limiting:
     #  https://developers.intercom.com/intercom-api-reference/reference#rate-limiting
-    @backoff.on_exception(backoff.expo,Timeout, max_tries=5, factor=2) # Backoff for request timeout
+    @backoff.on_exception(backoff.expo, Timeout, max_tries=5, factor=2) # Backoff for request timeout
     @backoff.on_exception(backoff.expo,
                           (Server5xxError, ConnectionError, Server429Error, IntercomScrollExistsError),
                           max_tries=7,
