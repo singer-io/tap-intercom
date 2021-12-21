@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.1.4
+  * Request Timeout Implementation [#36](https://github.com/singer-io/tap-intercom/pull/36)
+
 ## 1.1.3
   * Handle timestamps before 1970-1-1 [#24](https://github.com/singer-io/tap-intercom/pull/24)
 
