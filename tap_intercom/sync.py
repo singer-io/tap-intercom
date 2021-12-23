@@ -10,7 +10,7 @@ LOGGER = singer.get_logger()
 
 def translate_state(state):
     """
-    Tap was used to write bookmark using custom get_bookmark and write_bookmark methods, 
+    Tap was used to write bookmark using custom get_bookmark and write_bookmark methods,
     in which case the state looked like the following format.
     {
         "bookmarks": {
