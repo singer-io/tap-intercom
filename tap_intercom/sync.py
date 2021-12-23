@@ -8,11 +8,48 @@ from tap_intercom.streams import STREAMS
 
 LOGGER = singer.get_logger()
 
+def translate_state(state):
+    """
+    Tap was used to write bookmark using custom get_bookmark and write_bookmark methods, 
+    in which case the state looked like the following format.
+    {
+        "bookmarks": {
+            "company_segments": "2021-12-20T21:30:35.000000Z"
+        }
+    }
+
+    The tap now uses get_bookmark and write_bookmark methods of singer library,
+    which expects state in a new format with replication keys.
+    So this function should be called at beginning of each run to ensure the state is translated to a new format.
+    {
+        "bookmarks": {
+            "company_segments": {
+                "updated_at": "2021-12-20T21:30:35.000000Z"
+            }
+        }
+    }
+    """
+
+    # Iterate over all streams available in state
+    for stream, bookmark in state.get("bookmarks", {}).items():
+        # If bookmark is directly present without replication_key(old format)
+        # then add replication key at inner level
+        if isinstance(bookmark, str):
+            # Stream `companies` is changed from incremental to full_table
+            # so adding replication key used at incremental time to keep consistency.
+            replication_key = 'updated_at' if stream == "companies" else STREAMS[stream].replication_key
+            state["bookmarks"][stream] = {replication_key : bookmark}
+
+    return state
+
 def sync(config, state, catalog):
     """ Sync data from tap source """
 
     access_token = config.get('access_token')
     client = IntercomClient(access_token, config.get('request_timeout'), config.get('user_agent')) # pass request_timeout parameter from config
+
+    # Translate state to new format with replication key in state
+    state = translate_state(state)
 
     with Transformer() as transformer:
         for stream in catalog.get_selected_streams(state):
