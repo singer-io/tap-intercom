@@ -19,7 +19,8 @@ def denest_list_nodes(this_json, data_key, list_nodes):
 
 # De-nest conversation_parts from conversations w/ key conversation fields
 def transform_conversation_parts(this_json, data_key):
-    for record in this_json.get(data_key, []):
+    new_json = []
+    for record in list(this_json.get(data_key, [])):
         conv_id = record.get('id')
         conv_created = record.get('created_at')
         conv_updated = record.get('updated_at')
@@ -31,7 +32,8 @@ def transform_conversation_parts(this_json, data_key):
             part['conversation_total_parts'] = conv_total_parts
             part['conversation_created_at'] = conv_created
             part['conversation_updated_at'] = conv_updated
-            yield part
+            new_json.append(part)
+    return new_json
 
 
 # Run other transforms, as needed: denest_list_nodes, transform_conversation_parts
@@ -50,10 +52,8 @@ def transform_json(this_json, stream_name, data_key):
         denested_json = denest_list_nodes(new_json, data_key, list_nodes)
         new_json = denested_json
     elif stream_name == 'conversation_parts':
-        # Return transformed data directly as transform_conversation_parts returns generator without data_key
-        # so no need to check if condition below because it will flush out a generator
         denested_json = transform_conversation_parts(new_json, data_key)
-        return denested_json
+        new_json = denested_json
     if data_key in new_json:
         return new_json[data_key]
     return new_json
