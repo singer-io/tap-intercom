@@ -388,15 +388,16 @@ class ConversationParts(Conversations):
     params = {'display_as': 'plaintext'}
     data_key = 'conversations'
 
-    def get_records(self, bookmark_datetime=None, is_parent=False) -> Iterator[list]:
-        results = []
+    def get_conversation_parts(self, bookmark_datetime=None):
+        # Get conversation_parts using parent data
         for record in self.get_parent_data(bookmark_datetime):
             call_path = self.path.format(record)
             response = self.client.get(call_path, params=self.params)
+            yield response
+    
+    def get_records(self, bookmark_datetime=None, is_parent=False) -> Iterator[list]:
 
-            results.append(response)
-
-        data_for_transform = {self.data_key: results}
+        data_for_transform = {self.data_key: self.get_conversation_parts(bookmark_datetime)}
 
         transformed_records = transform_json(data_for_transform, self.tap_stream_id, self.data_key)
 
