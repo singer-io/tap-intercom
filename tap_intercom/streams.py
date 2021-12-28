@@ -389,18 +389,15 @@ class ConversationParts(Conversations):
     data_key = 'conversations'
 
     def get_records(self, bookmark_datetime=None, is_parent=False) -> Iterator[list]:
-        results = []
         for record in self.get_parent_data(bookmark_datetime):
             call_path = self.path.format(record)
             response = self.client.get(call_path, params=self.params)
 
-            results.append(response)
+            data_for_transform = {self.data_key: [response]}
 
-        data_for_transform = {self.data_key: results}
+            transformed_records = transform_json(data_for_transform, self.tap_stream_id, self.data_key)
 
-        transformed_records = transform_json(data_for_transform, self.tap_stream_id, self.data_key)
-
-        yield from transformed_records
+            yield from transformed_records
 
 
 class ContactAttributes(FullTableStream):
