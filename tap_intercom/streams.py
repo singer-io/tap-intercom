@@ -394,7 +394,7 @@ class ConversationParts(Conversations):
             call_path = self.path.format(record)
             response = self.client.get(call_path, params=self.params)
             yield response
-    
+
     def get_records(self, bookmark_datetime=None, is_parent=False) -> Iterator[list]:
 
         data_for_transform = {self.data_key: self.get_conversation_parts(bookmark_datetime)}
