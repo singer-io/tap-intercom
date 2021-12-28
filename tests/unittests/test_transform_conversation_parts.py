@@ -212,7 +212,7 @@ def test_transform_conversation_parts():
     conversations_list.append(RAW_CONVERSATION)
     conversations_dict[data_key] = conversations_list
 
-    transformed_conv_parts = transform_conversation_parts(conversations_dict, data_key)
+    transformed_conv_parts = list(transform_conversation_parts(conversations_dict, data_key))
     transformed_conv_parts_len = len(transformed_conv_parts)
     LOGGER.info('transformed_conv_parts_len = {}'.format(transformed_conv_parts_len))
     transformed_conv_parts_json = json.dumps(transformed_conv_parts, indent=2, sort_keys=True)
