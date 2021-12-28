@@ -1,4 +1,8 @@
 # Changelog
+
+## 1.1.6
+ * Fix OOM issue [#40] (https://github.com/singer-io/tap-intercom/pull/40)
+
 ## 1.1.5
  * Fix 'str' has no attribute get for getting bookmark. This is a fix for the previous version 1.1.4 which was rolled back  [#38] (https://github.com/singer-io/tap-intercom/pull/38)
 
