@@ -65,8 +65,7 @@ class BaseStream:
 
     @staticmethod
     def epoch_milliseconds_to_dt_str(timestamp: float) -> str:
-        with Transformer(integer_datetime_fmt=UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) \
-            as transformer:
+        with Transformer(integer_datetime_fmt=UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as transformer:
             new_dttm = transformer._transform_datetime(timestamp)
         return new_dttm
 
