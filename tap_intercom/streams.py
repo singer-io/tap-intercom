@@ -228,7 +228,7 @@ class Admins(FullTableStream):
         yield from admins
 
 
-class Companies(FullTableStream):
+class Companies(IncrementalStream):
     """
     Retrieves companies data using the Scroll API
 
@@ -237,6 +237,8 @@ class Companies(FullTableStream):
     tap_stream_id = 'companies'
     key_properties = ['id']
     path = 'companies/scroll' # using Scroll API
+    replication_key = 'updated_at'
+    valid_replication_keys = ['updated_at']
     data_key = 'data'
 
     def get_records(self, bookmark_datetime=None, is_parent=False) -> Iterator[list]:
