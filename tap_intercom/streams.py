@@ -65,8 +65,10 @@ class BaseStream:
 
     @staticmethod
     def epoch_milliseconds_to_dt_str(timestamp: float) -> str:
-        dt_object = datetime.datetime.fromtimestamp(timestamp / 1000.0)
-        return dt_object.isoformat()
+        with Transformer(integer_datetime_fmt=UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) \
+            as transformer:
+            new_dttm = transformer._transform_datetime(timestamp)
+        return new_dttm
 
     @staticmethod
     def dt_to_epoch_seconds(dt_object: datetime) -> float:
@@ -125,7 +127,7 @@ class IncrementalStream(BaseStream):
                                                     stream_schema,
                                                     integer_datetime_fmt=UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING,
                                                     metadata=stream_metadata)
-                    singer.write_record(self.tap_stream_id, transformed_record)
+                    singer.write_record(self.tap_stream_id, transformed_record, time_extracted=singer.utils.now())
                     counter.increment()
                     max_datetime = max(record_datetime, max_datetime)
             bookmark_date = singer.utils.strftime(max_datetime)
@@ -175,7 +177,7 @@ class FullTableStream(BaseStream):
                                                 stream_schema,
                                                 integer_datetime_fmt=UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING,
                                                 metadata=stream_metadata)
-                singer.write_record(self.tap_stream_id, transformed_record)
+                singer.write_record(self.tap_stream_id, transformed_record, time_extracted=singer.utils.now())
                 counter.increment()
 
         return state
