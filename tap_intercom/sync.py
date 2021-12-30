@@ -56,8 +56,22 @@ def sync(config, state, catalog):
     # `state` will be updated and written to output based on current sync
     tap_state = state.copy()
 
+    selected_streams = []
+    # Add parent-stream to selected_streams if child-stream is selected
+    # but parent-stream is not selected
+    for stream in catalog.get_selected_streams(state):
+        selected_streams.append(stream.tap_stream_id)
+        parent_stream = STREAMS[stream.tap_stream_id].parent # Get parent stream
+        # If stream have parent stream and not selected then add it to selected_stream
+        if parent_stream and parent_stream.tap_stream_id not in selected_streams:
+            selected_streams.append(parent_stream.tap_stream_id)
+
+    LOGGER.info('selected_streams: {}'.format(selected_streams))
+
     with Transformer() as transformer:
-        for stream in catalog.get_selected_streams(state):
+        # Iterate over selected_streams
+        for stream_name in selected_streams:
+            stream = catalog.get_stream(stream_name)
             tap_stream_id = stream.tap_stream_id
             stream_obj = STREAMS[tap_stream_id](client)
             stream_schema = stream.schema.to_dict()
