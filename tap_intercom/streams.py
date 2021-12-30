@@ -418,9 +418,11 @@ class ConversationParts(FullTableStream):
         schema_datetimes = find_datetimes_in_schema(stream_schema)
 
         with metrics.record_counter(self.tap_stream_id) as counter:
+            # Iterate over conversation_parts records
             for record in self.get_records(bookmark_datetime):
-                transform_times(record, schema_datetimes)
+                transform_times(record, schema_datetimes) # Transfrom dates fields of record
 
+                # Write record after transforming as per metadata
                 transformed_record = transform(record,
                                                 stream_schema,
                                                 integer_datetime_fmt=UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING,
