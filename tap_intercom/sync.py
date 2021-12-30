@@ -70,9 +70,9 @@ def sync(config, state, catalog):
 
     with Transformer() as transformer:
         # Iterate over selected_streams
-        for tap_stream_id in selected_streams:
-            stream = catalog.get_stream(tap_stream_id)
-            # tap_stream_id = stream.tap_stream_id
+        for stream_name in selected_streams:
+            stream = catalog.get_stream(stream_name)
+            tap_stream_id = stream.tap_stream_id
             stream_obj = STREAMS[tap_stream_id](client)
             stream_schema = stream.schema.to_dict()
             stream_metadata = metadata.to_map(stream.metadata)
