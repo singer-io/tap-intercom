@@ -96,7 +96,7 @@ class IncrementalStream(BaseStream):
         """
         The sync logic for an incremental stream.
 
-        :param state: A dictionary representing singer state which will be preserve during whole sync with passed state
+        :param tap_state: A dictionary representing singer state which will be preserve during whole sync with passed state
         :param state: A dictionary representing singer state which will be updated and written to output
         :param stream_schema: A dictionary containing the stream schema
         :param stream_metadata: A dictionnary containing stream metadata
@@ -162,7 +162,7 @@ class FullTableStream(BaseStream):
         """
         The sync logic for an full table stream.
 
-        :param state: A dictionary representing singer state which will be preserve during whole sync with passed state
+        :param tap_state: A dictionary representing singer state which will be preserve during whole sync with passed state
         :param state: A dictionary representing singer state which will be updated and written to output
         :param stream_schema: A dictionary containing the stream schema
         :param stream_metadata: A dictionnary containing stream metadata
@@ -400,7 +400,7 @@ class ConversationParts(FullTableStream):
         """
         The sync logic for an conversation_parts stream.
 
-        :param state: A dictionary representing singer state which will be preserve during whole sync with passed state
+        :param tap_state: A dictionary representing singer state which will be preserve during whole sync with passed state
         :param state: A dictionary representing singer state which will be updated and written to output
         :param stream_schema: A dictionary containing the stream schema
         :param stream_metadata: A dictionnary containing stream metadata
@@ -408,7 +408,6 @@ class ConversationParts(FullTableStream):
         :return: State data in the form of a dictionary
         """
         # Get bookmark of parent stream `conversations` from tap_state
-        # to retrive all `conversation_parts` for `conversations` update after it
         start_date = singer.get_bookmark(tap_state,
                                          self.parent.tap_stream_id,
                                          self.parent.replication_key,
