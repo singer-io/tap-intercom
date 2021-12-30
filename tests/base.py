@@ -86,8 +86,7 @@ class IntercomBaseTest(unittest.TestCase):
             },
             "conversation_parts": {
                 self.PRIMARY_KEYS: {"id"},
-                self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"updated_at"}
+                self.REPLICATION_METHOD: self.FULL_TABLE,
             },
             "contact_attributes": {
                 self.PRIMARY_KEYS: {"name"},

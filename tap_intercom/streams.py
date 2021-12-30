@@ -87,6 +87,7 @@ class IncrementalStream(BaseStream):
     # Method which call this `sync` method is passing unused argument.So, removing argument would not work.
     # pylint: disable=too-many-arguments,unused-argument
     def sync(self,
+             tap_state: dict,
              state: dict,
              stream_schema: dict,
              stream_metadata: dict,
@@ -95,13 +96,14 @@ class IncrementalStream(BaseStream):
         """
         The sync logic for an incremental stream.
 
-        :param state: A dictionary representing singer state
+        :param state: A dictionary representing singer state which will be preserve during whole sync with passed state
+        :param state: A dictionary representing singer state which will be updated and written to output
         :param stream_schema: A dictionary containing the stream schema
         :param stream_metadata: A dictionnary containing stream metadata
         :param config: A dictionary containing tap config data
         :return: State data in the form of a dictionary
         """
-        start_date = singer.get_bookmark(state,
+        start_date = singer.get_bookmark(tap_state,
                                          self.tap_stream_id,
                                          self.replication_key,
                                          config['start_date'])
@@ -151,6 +153,7 @@ class FullTableStream(BaseStream):
     # Method which call this `sync` method is passing unused argument. So, removing argument would not work.
     # pylint: disable=too-many-arguments,unused-argument
     def sync(self,
+             tap_state: dict,
              state: dict,
              stream_schema: dict,
              stream_metadata: dict,
@@ -159,7 +162,8 @@ class FullTableStream(BaseStream):
         """
         The sync logic for an full table stream.
 
-        :param state: A dictionary representing singer state
+        :param state: A dictionary representing singer state which will be preserve during whole sync with passed state
+        :param state: A dictionary representing singer state which will be updated and written to output
         :param stream_schema: A dictionary containing the stream schema
         :param stream_metadata: A dictionnary containing stream metadata
         :param config: A dictionary containing tap config data
@@ -373,7 +377,7 @@ class Conversations(IncrementalStream):
                 yield from records
 
 
-class ConversationParts(Conversations):
+class ConversationParts(FullTableStream):
     """
     Retrieve conversation parts
 
@@ -382,11 +386,50 @@ class ConversationParts(Conversations):
     tap_stream_id = 'conversation_parts'
     key_properties = ['id']
     path = 'conversations/{}'
-    replication_key = 'updated_at'
-    valid_replication_keys = ['updated_at']
     parent = Conversations
     params = {'display_as': 'plaintext'}
     data_key = 'conversations'
+
+    def sync(self,
+             tap_state: dict,
+             state: dict,
+             stream_schema: dict,
+             stream_metadata: dict,
+             config: dict,
+             transformer: Transformer) -> dict:
+        """
+        The sync logic for an conversation_parts stream.
+
+        :param state: A dictionary representing singer state which will be preserve during whole sync with passed state
+        :param state: A dictionary representing singer state which will be updated and written to output
+        :param stream_schema: A dictionary containing the stream schema
+        :param stream_metadata: A dictionnary containing stream metadata
+        :param config: A dictionary containing tap config data
+        :return: State data in the form of a dictionary
+        """
+        # Get bookmark of parent stream `conversations` from tap_state
+        # to retrive all `conversation_parts` for `conversations` update after it
+        start_date = singer.get_bookmark(tap_state,
+                                         self.parent.tap_stream_id,
+                                         self.parent.replication_key,
+                                         config['start_date'])
+
+        bookmark_datetime = singer.utils.strptime_to_utc(start_date)
+
+        schema_datetimes = find_datetimes_in_schema(stream_schema)
+
+        with metrics.record_counter(self.tap_stream_id) as counter:
+            for record in self.get_records(bookmark_datetime):
+                transform_times(record, schema_datetimes)
+
+                transformed_record = transform(record,
+                                                stream_schema,
+                                                integer_datetime_fmt=UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING,
+                                                metadata=stream_metadata)
+                singer.write_record(self.tap_stream_id, transformed_record)
+                counter.increment()
+
+        return state
 
     def get_records(self, bookmark_datetime=None, is_parent=False) -> Iterator[list]:
         for record in self.get_parent_data(bookmark_datetime):

@@ -36,8 +36,9 @@ def translate_state(state):
         # then add replication key at inner level
         if isinstance(bookmark, str):
             # Stream `companies` is changed from incremental to full_table
+            # Stream `conversation_parts` is changed from full_table to incremental and again full_table
             # so adding replication key used at incremental time to keep consistency.
-            replication_key = 'updated_at' if stream == "companies" else STREAMS[stream].replication_key
+            replication_key = 'updated_at' if stream in ["companies", "conversation_parts"] else STREAMS[stream].replication_key
             state["bookmarks"][stream] = {replication_key : bookmark}
 
     return state
@@ -50,6 +51,10 @@ def sync(config, state, catalog):
 
     # Translate state to new format with replication key in state
     state = translate_state(state)
+
+    # `tap_state` will preserve state passed in sync mode and
+    # `state` will be updated and written to output based on current sync
+    tap_state = state.copy()
 
     with Transformer() as transformer:
         for stream in catalog.get_selected_streams(state):
@@ -70,7 +75,7 @@ def sync(config, state, catalog):
                 stream.replication_key
             )
 
-            state = stream_obj.sync(state, stream_schema, stream_metadata, config, transformer)
+            state = stream_obj.sync(tap_state, state, stream_schema, stream_metadata, config, transformer)
             singer.write_state(state)
 
     state = singer.set_currently_syncing(state, None)
