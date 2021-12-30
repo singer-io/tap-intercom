@@ -57,8 +57,6 @@ class IntercomBaseTest(unittest.TestCase):
     @staticmethod
     def get_credentials():
         """Authentication information for the test account"""
-        print("----------------------debugging---------------------")
-        print(os.getenv('TAP_INTERCOM_ACCESS_TOKEN'))
         return {'access_token': os.getenv('TAP_INTERCOM_ACCESS_TOKEN')}
 
     def expected_metadata(self):
