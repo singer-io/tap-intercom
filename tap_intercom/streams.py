@@ -408,13 +408,14 @@ class ConversationParts(FullTableStream):
         :return: State data in the form of a dictionary
         """
         # Get bookmark of parent stream `conversations` from tap_state
-        start_date = singer.get_bookmark(tap_state,
+        parent_bookmark = singer.get_bookmark(tap_state,
                                          self.parent.tap_stream_id,
                                          self.parent.replication_key,
                                          config['start_date'])
 
-        bookmark_datetime = singer.utils.strptime_to_utc(start_date)
+        bookmark_datetime = singer.utils.strptime_to_utc(parent_bookmark)
 
+        # Find datetime fields from schema of conversation_parts
         schema_datetimes = find_datetimes_in_schema(stream_schema)
 
         with metrics.record_counter(self.tap_stream_id) as counter:
@@ -430,6 +431,7 @@ class ConversationParts(FullTableStream):
                 singer.write_record(self.tap_stream_id, transformed_record)
                 counter.increment()
 
+            LOGGER.info("FINISHED Syncing: {}, total_records: {}.".format(self.tap_stream_id, counter.value))
         return state
 
     def get_records(self, bookmark_datetime=None, is_parent=False) -> Iterator[list]:
