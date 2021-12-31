@@ -127,7 +127,8 @@ class IncrementalStream(BaseStream):
                                                     stream_schema,
                                                     integer_datetime_fmt=UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING,
                                                     metadata=stream_metadata)
-                    singer.write_record(self.tap_stream_id, transformed_record)
+                    # Write records with time_extracted field
+                    singer.write_record(self.tap_stream_id, transformed_record, time_extracted=singer.utils.now())
                     counter.increment()
                     max_datetime = max(record_datetime, max_datetime)
             bookmark_date = singer.utils.strftime(max_datetime)
@@ -177,7 +178,8 @@ class FullTableStream(BaseStream):
                                                 stream_schema,
                                                 integer_datetime_fmt=UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING,
                                                 metadata=stream_metadata)
-                singer.write_record(self.tap_stream_id, transformed_record)
+                # Write records with time_extracted field
+                singer.write_record(self.tap_stream_id, transformed_record, time_extracted=singer.utils.now())
                 counter.increment()
 
         return state
@@ -418,7 +420,7 @@ class ConversationParts(BaseStream):
         :return: State data in the form of a dictionary
         """
 
-        # Get bookmarkfor the `conversation_parts` from state
+        # Get bookmark for the `conversation_parts` from state
         start_date = singer.get_bookmark(state,
                                          self.tap_stream_id,
                                          self.replication_key,
@@ -466,6 +468,7 @@ class ConversationParts(BaseStream):
                                           self.replication_key,
                                           replication_key)
             singer.write_state(state)
+            LOGGER.info("Stream: {}, updating bookmark: {}".format(self.tap_stream_id, replication_key))
 
 class ContactAttributes(FullTableStream):
     """
