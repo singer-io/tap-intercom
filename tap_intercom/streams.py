@@ -65,8 +65,10 @@ class BaseStream:
 
     @staticmethod
     def epoch_milliseconds_to_dt_str(timestamp: float) -> str:
-        dt_object = datetime.datetime.fromtimestamp(timestamp / 1000.0)
-        return dt_object.isoformat()
+        # Convert epoch milliseconds to datetime object in UTC format
+        with Transformer(integer_datetime_fmt=UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as transformer:
+            new_dttm = transformer._transform_datetime(timestamp)
+        return new_dttm
 
     @staticmethod
     def dt_to_epoch_seconds(dt_object: datetime) -> float:
@@ -344,11 +346,19 @@ class Conversations(IncrementalStream):
             'pagination': {
                 'per_page': self.per_page
             },
-            "query": {
-                "field": self.replication_key,
-                "operator": ">",
-                "value": self.dt_to_epoch_seconds(bookmark_datetime)
-            },
+            'query': {
+                'operator': 'OR',
+                'value': [{
+                    'field': self.replication_key,
+                    'operator': '>',
+                    'value': self.dt_to_epoch_seconds(bookmark_datetime)
+                    },
+                    {
+                    'field': self.replication_key,
+                    'operator': '=',
+                    'value': self.dt_to_epoch_seconds(bookmark_datetime)
+                    }]
+                },
             "sort": {
                 "field": self.replication_key,
                 "order": "ascending"
@@ -382,6 +392,7 @@ class ConversationParts(BaseStream):
     tap_stream_id = 'conversation_parts'
     key_properties = ['id']
     path = 'conversations/{}'
+    replication_method = 'INCREMENTAL'
     replication_key = 'updated_at'
     valid_replication_keys = ['updated_at']
     parent = Conversations
