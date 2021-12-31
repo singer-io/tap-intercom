@@ -451,13 +451,14 @@ class ConversationParts(BaseStream):
         parent = self.parent(self.client) # Initialize parent object
         # Iterate over conversations
         for record in parent.get_records(bookmark_datetime): # Get parent's records
+            LOGGER.info("Syncing: {}, parent_stream: {}, parent_id: {}".format(self.tap_stream_id, self.parent.tap_stream_id, record['id']))
             call_path = self.path.format(record.get('id'))
             response = self.client.get(call_path, params=self.params)
 
             data_for_transform = {self.data_key: [response]}
 
             transformed_records = transform_json(data_for_transform, self.tap_stream_id, self.data_key)
-
+            LOGGER.info("Synced: {}, parent_id: {}, records: {}".format(self.tap_stream_id, record['id'], len(transformed_records)))
             yield from transformed_records
 
             # Conversations(parent) are coming in ascending order
