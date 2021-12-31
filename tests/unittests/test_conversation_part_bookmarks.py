@@ -28,16 +28,14 @@ class TestConversationPartsBookmarking(unittest.TestCase):
         # Call get_records() of conversation_parts which writes bookmark
         records = list(conversation_part.get_records({}, "test"))
 
-        # State after bookmark-update
-        updated_state = {'bookmarks': {'conversation_parts': {'updated_at': '2021-12-27T20:30:00.000000Z'}}}
-
         # Expected call of write_bookmark() function
+        state = {'bookmarks': {'conversation_parts': {'updated_at': '2021-12-27T20:30:00.000000Z'}}}
         expected_write_state = [
             # Bookmark update after first parent(2021-12-27T20:13:20.000000Z)
-            mock.call({}, 'conversation_parts', 'updated_at', '2021-12-27T20:13:20.000000Z'),
+            mock.call(state, 'conversation_parts', 'updated_at', '2021-12-27T20:13:20.000000Z'),
             # Bookmark update after second parent(2021-12-27T20:30:00.000000Z)
-            mock.call(updated_state, 'conversation_parts', 'updated_at', '2021-12-27T20:30:00.000000Z')
+            mock.call(state, 'conversation_parts', 'updated_at', '2021-12-27T20:30:00.000000Z')
         ]
 
         # Verify that write_bookmark() is called with expected values
-        self.assertEquals(mocked_state.mock_calls[1], expected_write_state[1])
+        self.assertEquals(mocked_state.mock_calls, expected_write_state)
