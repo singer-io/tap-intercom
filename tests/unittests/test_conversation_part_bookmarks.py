@@ -15,7 +15,7 @@ class TestConversationPartsBookmarking(unittest.TestCase):
         '''
         # Mocked parent records
         mocked_parent_records.return_value = [
-            {"id": 1, "updated_at": 1640636000}, # UTC datetime "2021-12-27T20:30:00.000000Z" for 1640636000
+            {"id": 1, "updated_at": 1640636000}, # UTC datetime "2021-12-27T20:13:20.000000Z" for 1640636000
             {"id": 2, "updated_at": 1640637000}  # UTC datetime "2021-12-27T20:30:00.000000Z" for 1640637000
         ]
         # Mocked child records
@@ -28,14 +28,14 @@ class TestConversationPartsBookmarking(unittest.TestCase):
         # Call get_records() of conversation_parts which writes bookmark
         records = list(conversation_part.get_records({}, "test"))
 
-        # Expected state after bookmark-update of first parent
+        # State after bookmark-update
         updated_state = {'bookmarks': {'conversation_parts': {'updated_at': '2021-12-27T20:30:00.000000Z'}}}
 
         # Expected call of write_bookmark() function
         expected_write_state = [
-            # Bookmark update with updated_at of first parent record
+            # Bookmark update after first parent(2021-12-27T20:13:20.000000Z)
             mock.call({}, 'conversation_parts', 'updated_at', '2021-12-27T20:13:20.000000Z'),
-            # Bookmark update with updated_at of second parent record
+            # Bookmark update after second parent(2021-12-27T20:30:00.000000Z)
             mock.call(updated_state, 'conversation_parts', 'updated_at', '2021-12-27T20:30:00.000000Z')
         ]
 
