@@ -8,7 +8,7 @@ from typing import Iterator
 
 import singer
 from singer import Transformer, metrics, UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING
-from singer.transform import transform
+from singer.transform import transform, unix_milliseconds_to_datetime
 
 from tap_intercom.client import (IntercomClient, IntercomError)
 from tap_intercom.transform import (transform_json, transform_times, find_datetimes_in_schema)
@@ -66,8 +66,7 @@ class BaseStream:
     @staticmethod
     def epoch_milliseconds_to_dt_str(timestamp: float) -> str:
         # Convert epoch milliseconds to datetime object in UTC format
-        with Transformer(integer_datetime_fmt=UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as transformer:
-            new_dttm = transformer._transform_datetime(timestamp)
+        new_dttm = unix_milliseconds_to_datetime(timestamp)
         return new_dttm
 
     @staticmethod
@@ -411,7 +410,7 @@ class ConversationParts(BaseStream):
              config: dict,
              transformer: Transformer) -> dict:
         """
-        The sync logic for an full table stream.
+        The sync logic for a conversation_parts stream.
 
         :param state: A dictionary representing singer state
         :param stream_schema: A dictionary containing the stream schema
@@ -463,13 +462,12 @@ class ConversationParts(BaseStream):
 
             # Conversations(parent) are coming in ascending order
             # so write state with updated_at of conversation after yielding conversation_parts for it.
-            replication_key = self.epoch_milliseconds_to_dt_str(record[self.parent.replication_key] * 1000)
+            parent_bookmark_value = self.epoch_milliseconds_to_dt_str(record[self.parent.replication_key] * 1000)
             state = singer.write_bookmark(state,
                                           self.tap_stream_id,
                                           self.replication_key,
-                                          replication_key)
+                                          parent_bookmark_value)
             singer.write_state(state)
-            LOGGER.info("Stream: {}, updating bookmark: {}".format(self.tap_stream_id, replication_key))
 
 class ContactAttributes(FullTableStream):
     """
