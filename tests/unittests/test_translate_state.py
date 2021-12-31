@@ -13,7 +13,6 @@ class TestTranslateState(unittest.TestCase):
                 "companies": "2021-12-22T07:23:47.000000Z",
                 "company_segments": "2021-12-20T21:30:35.000000Z",
                 "conversations": "2021-12-22T08:01:05.000000Z",
-                "conversation_parts": "2021-12-22T08:01:05.000000Z",
                 "contacts": "2021-12-22T08:07:57.000000Z",
                 "segments": "2021-11-01T00:00:00Z"
             }
@@ -28,9 +27,6 @@ class TestTranslateState(unittest.TestCase):
                     "updated_at": "2021-12-20T21:30:35.000000Z"
                 },
                 "conversations": {
-                    "updated_at": "2021-12-22T08:01:05.000000Z"
-                },
-                "conversation_parts": {
                     "updated_at": "2021-12-22T08:01:05.000000Z"
                 },
                 "contacts": {
@@ -62,9 +58,6 @@ class TestTranslateState(unittest.TestCase):
                     "updated_at": "2021-12-20T21:30:35.000000Z"
                 },
                 "conversations": {
-                    "updated_at": "2021-12-22T08:01:05.000000Z"
-                },
-                "conversation_parts": {
                     "updated_at": "2021-12-22T08:01:05.000000Z"
                 },
                 "contacts": {

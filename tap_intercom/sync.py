@@ -36,9 +36,8 @@ def translate_state(state):
         # then add replication key at inner level
         if isinstance(bookmark, str):
             # Stream `companies` is changed from incremental to full_table
-            # Stream `conversation_parts` is changed from full_table to incremental and again full_table
             # so adding replication key used at incremental time to keep consistency.
-            replication_key = 'updated_at' if stream in ["companies", "conversation_parts"] else STREAMS[stream].replication_key
+            replication_key = 'updated_at' if stream == "companies" else STREAMS[stream].replication_key
             state["bookmarks"][stream] = {replication_key : bookmark}
 
     return state
@@ -52,26 +51,8 @@ def sync(config, state, catalog):
     # Translate state to new format with replication key in state
     state = translate_state(state)
 
-    # `tap_state` will preserve state passed in sync mode and
-    # `state` will be updated and written to output based on current sync
-    tap_state = state.copy()
-
-    selected_streams = []
-    # Add parent-stream to selected_streams if child-stream is selected
-    # but parent-stream is not selected
-    for stream in catalog.get_selected_streams(state):
-        selected_streams.append(stream.tap_stream_id)
-        parent_stream = STREAMS[stream.tap_stream_id].parent # Get parent stream
-        # If stream have parent stream, parent stream available for replicate and not selected then add it to selected_stream
-        if parent_stream and parent_stream.to_replicate and parent_stream.tap_stream_id not in selected_streams:
-            selected_streams.append(parent_stream.tap_stream_id)
-
-    LOGGER.info('selected_streams: {}'.format(selected_streams))
-
     with Transformer() as transformer:
-        # Iterate over selected_streams
-        for stream_name in selected_streams:
-            stream = catalog.get_stream(stream_name)
+        for stream in catalog.get_selected_streams(state):
             tap_stream_id = stream.tap_stream_id
             stream_obj = STREAMS[tap_stream_id](client)
             stream_schema = stream.schema.to_dict()
@@ -89,7 +70,7 @@ def sync(config, state, catalog):
                 stream.replication_key
             )
 
-            state = stream_obj.sync(tap_state, state, stream_schema, stream_metadata, config, transformer)
+            state = stream_obj.sync(state, stream_schema, stream_metadata, config, transformer)
             singer.write_state(state)
 
     state = singer.set_currently_syncing(state, None)

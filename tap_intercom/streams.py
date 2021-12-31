@@ -65,8 +65,10 @@ class BaseStream:
 
     @staticmethod
     def epoch_milliseconds_to_dt_str(timestamp: float) -> str:
-        dt_object = datetime.datetime.fromtimestamp(timestamp / 1000.0)
-        return dt_object.isoformat()
+        # Convert epoch milliseconds to datetime object in UTC format
+        with Transformer(integer_datetime_fmt=UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as transformer:
+            new_dttm = transformer._transform_datetime(timestamp)
+        return new_dttm
 
     @staticmethod
     def dt_to_epoch_seconds(dt_object: datetime) -> float:
@@ -87,7 +89,6 @@ class IncrementalStream(BaseStream):
     # Method which call this `sync` method is passing unused argument.So, removing argument would not work.
     # pylint: disable=too-many-arguments,unused-argument
     def sync(self,
-             tap_state: dict,
              state: dict,
              stream_schema: dict,
              stream_metadata: dict,
@@ -96,14 +97,13 @@ class IncrementalStream(BaseStream):
         """
         The sync logic for an incremental stream.
 
-        :param tap_state: A dictionary representing singer state which will be preserve during whole sync with passed state
-        :param state: A dictionary representing singer state which will be updated and written to output
+        :param state: A dictionary representing singer state
         :param stream_schema: A dictionary containing the stream schema
         :param stream_metadata: A dictionnary containing stream metadata
         :param config: A dictionary containing tap config data
         :return: State data in the form of a dictionary
         """
-        start_date = singer.get_bookmark(tap_state,
+        start_date = singer.get_bookmark(state,
                                          self.tap_stream_id,
                                          self.replication_key,
                                          config['start_date'])
@@ -153,7 +153,6 @@ class FullTableStream(BaseStream):
     # Method which call this `sync` method is passing unused argument. So, removing argument would not work.
     # pylint: disable=too-many-arguments,unused-argument
     def sync(self,
-             tap_state: dict,
              state: dict,
              stream_schema: dict,
              stream_metadata: dict,
@@ -162,8 +161,7 @@ class FullTableStream(BaseStream):
         """
         The sync logic for an full table stream.
 
-        :param tap_state: A dictionary representing singer state which will be preserve during whole sync with passed state
-        :param state: A dictionary representing singer state which will be updated and written to output
+        :param state: A dictionary representing singer state
         :param stream_schema: A dictionary containing the stream schema
         :param stream_metadata: A dictionnary containing stream metadata
         :param config: A dictionary containing tap config data
@@ -377,7 +375,7 @@ class Conversations(IncrementalStream):
                 yield from records
 
 
-class ConversationParts(FullTableStream):
+class ConversationParts(BaseStream):
     """
     Retrieve conversation parts
 
@@ -386,44 +384,47 @@ class ConversationParts(FullTableStream):
     tap_stream_id = 'conversation_parts'
     key_properties = ['id']
     path = 'conversations/{}'
+    replication_key = 'updated_at'
+    valid_replication_keys = ['updated_at']
     parent = Conversations
     params = {'display_as': 'plaintext'}
     data_key = 'conversations'
 
+    # Disabled `unused-argument` as it causing pylint error.
+    # Method which call this `sync` method is passing unused argument.So, removing argument would not work.
+    # pylint: disable=unused-argument
     def sync(self,
-             tap_state: dict,
              state: dict,
              stream_schema: dict,
              stream_metadata: dict,
              config: dict,
              transformer: Transformer) -> dict:
         """
-        The sync logic for an conversation_parts stream.
+        The sync logic for an full table stream.
 
-        :param tap_state: A dictionary representing singer state which will be preserve during whole sync with passed state
-        :param state: A dictionary representing singer state which will be updated and written to output
+        :param state: A dictionary representing singer state
         :param stream_schema: A dictionary containing the stream schema
         :param stream_metadata: A dictionnary containing stream metadata
         :param config: A dictionary containing tap config data
         :return: State data in the form of a dictionary
         """
-        # Get bookmark of parent stream `conversations` from tap_state
-        parent_bookmark = singer.get_bookmark(tap_state,
-                                         self.parent.tap_stream_id,
-                                         self.parent.replication_key,
+
+        # Get bookmarkfor the `conversation_parts` from state
+        start_date = singer.get_bookmark(state,
+                                         self.tap_stream_id,
+                                         self.replication_key,
                                          config['start_date'])
 
-        bookmark_datetime = singer.utils.strptime_to_utc(parent_bookmark)
+        bookmark_datetime = singer.utils.strptime_to_utc(start_date)
 
         # Find datetime fields from schema of conversation_parts
         schema_datetimes = find_datetimes_in_schema(stream_schema)
 
         with metrics.record_counter(self.tap_stream_id) as counter:
             # Iterate over conversation_parts records
-            for record in self.get_records(bookmark_datetime):
-                transform_times(record, schema_datetimes) # Transfrom dates fields of record
+            for record in self.get_records(state, bookmark_datetime):
+                transform_times(record, schema_datetimes) # Transfrom datetimes fields of record
 
-                # Write record after transforming as per metadata
                 transformed_record = transform(record,
                                                 stream_schema,
                                                 integer_datetime_fmt=UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING,
@@ -434,9 +435,13 @@ class ConversationParts(FullTableStream):
             LOGGER.info("FINISHED Syncing: {}, total_records: {}.".format(self.tap_stream_id, counter.value))
         return state
 
-    def get_records(self, bookmark_datetime=None, is_parent=False) -> Iterator[list]:
-        for record in self.get_parent_data(bookmark_datetime):
-            call_path = self.path.format(record)
+    def get_records(self, state, bookmark_datetime=None, is_parent=False) -> Iterator[list]:
+
+        parent = self.parent(self.client) # Initialize parent object
+
+        # Iterate over conversations
+        for record in parent.get_records(bookmark_datetime):
+            call_path = self.path.format(record.get('id'))
             response = self.client.get(call_path, params=self.params)
 
             data_for_transform = {self.data_key: [response]}
@@ -445,6 +450,14 @@ class ConversationParts(FullTableStream):
 
             yield from transformed_records
 
+            # Conversations(parent) are coming in ascending order
+            # so write state with updated_at of conversation after yielding conversation_parts for it.
+            replication_key = self.epoch_milliseconds_to_dt_str(record[self.parent.replication_key] * 1000)
+            state = singer.write_bookmark(state,
+                                          self.tap_stream_id,
+                                          self.replication_key,
+                                          replication_key)
+            singer.write_state(state)
 
 class ContactAttributes(FullTableStream):
     """

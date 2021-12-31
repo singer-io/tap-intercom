@@ -194,14 +194,8 @@ class IntercomBookmarks(IntercomBaseTest):
                     self.assertIsNone(first_bookmark_key_value)
                     self.assertIsNone(second_bookmark_key_value)
 
-                    # `conversation_parts` is a full_table as it sync all records for incremental parents(conversations)
-                    # but conversation(parent) count differ based on bookmark so `conversation_parts` count also differ.
-                    if stream == "conversation_parts":
-                        # Verify the number of records in the 2nd sync is less then the first
-                        self.assertLess(second_sync_count, first_sync_count)
-                    else:
-                        # Verify the number of records in the second sync is the same as the first
-                        self.assertEqual(second_sync_count, first_sync_count)
+                    # Verify the number of records in the second sync is the same as the first
+                    self.assertEqual(second_sync_count, first_sync_count)
 
 
                 else:
