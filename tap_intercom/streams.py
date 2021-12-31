@@ -206,8 +206,6 @@ class AdminList(FullTableStream):
             LOGGER.critical('response is empty for {} stream'.format(self.tap_stream_id))
             raise IntercomError
 
-        LOGGER.info("Synced: {}, records: {}".format(self.tap_stream_id, len(response.get(self.data_key, []))))
-
         # Only yield records when called by child streams
         if is_parent:
             for record in response.get(self.data_key):
@@ -233,8 +231,6 @@ class Admins(FullTableStream):
             results = self.client.get(call_path)
 
             admins.append(results)
-            # the record count will be 1 as, we are requesting information of admin via admin id
-            LOGGER.info("Synced: {}, parent_id: {}, records: {}".format(self.tap_stream_id, record, 1))
 
         yield from admins
 
