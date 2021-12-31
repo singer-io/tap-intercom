@@ -440,7 +440,7 @@ class ConversationParts(BaseStream):
                                                 stream_schema,
                                                 integer_datetime_fmt=UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING,
                                                 metadata=stream_metadata)
-                singer.write_record(self.tap_stream_id, transformed_record)
+                singer.write_record(self.tap_stream_id, transformed_record, time_extracted=singer.utils.now())
                 counter.increment()
 
             LOGGER.info("FINISHED Syncing: {}, total_records: {}.".format(self.tap_stream_id, counter.value))
