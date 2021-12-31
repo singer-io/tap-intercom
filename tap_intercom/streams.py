@@ -65,10 +65,8 @@ class BaseStream:
 
     @staticmethod
     def epoch_milliseconds_to_dt_str(timestamp: float) -> str:
-        # Convert epoch milliseconds to datetime object in UTC format
-        with Transformer(integer_datetime_fmt=UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as transformer:
-            new_dttm = transformer._transform_datetime(timestamp)
-        return new_dttm
+        dt_object = datetime.datetime.fromtimestamp(timestamp / 1000.0)
+        return dt_object.isoformat()
 
     @staticmethod
     def dt_to_epoch_seconds(dt_object: datetime) -> float:
@@ -438,9 +436,8 @@ class ConversationParts(BaseStream):
     def get_records(self, state, bookmark_datetime=None, is_parent=False) -> Iterator[list]:
 
         parent = self.parent(self.client) # Initialize parent object
-
         # Iterate over conversations
-        for record in parent.get_records(bookmark_datetime):
+        for record in parent.get_records(bookmark_datetime): # Get parent's records
             call_path = self.path.format(record.get('id'))
             response = self.client.get(call_path, params=self.params)
 
