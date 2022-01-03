@@ -199,7 +199,6 @@ class AdminList(FullTableStream):
     data_key = 'admins'
 
     def get_records(self, bookmark_datetime=None, is_parent=False) -> Iterator[list]:
-        LOGGER.info("Syncing: {}".format(self.tap_stream_id))
         response = self.client.get(self.path)
 
         if not response.get(self.data_key):
@@ -223,10 +222,10 @@ class Admins(FullTableStream):
     parent = AdminList
 
     def get_records(self, bookmark_datetime=None, is_parent=False) -> Iterator[list]:
+        LOGGER.info("Syncing: {}".format(self.parent.tap_stream_id))
         admins = []
 
         for record in self.get_parent_data():
-            LOGGER.info("Syncing: {}, parent_stream: {}, parent_id: {}".format(self.tap_stream_id, self.parent.tap_stream_id, record))
             call_path = self.path.format(record)
             results = self.client.get(call_path)
 
