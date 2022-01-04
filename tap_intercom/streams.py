@@ -222,7 +222,7 @@ class Admins(FullTableStream):
     parent = AdminList
 
     def get_records(self, bookmark_datetime=None, is_parent=False) -> Iterator[list]:
-        LOGGER.info("Syncing: {}".format(self.parent.tap_stream_id))
+        LOGGER.info("Syncing: {}".format(self.tap_stream_id))
         admins = []
 
         for record in self.get_parent_data():
