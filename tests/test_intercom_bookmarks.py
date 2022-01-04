@@ -64,11 +64,7 @@ class IntercomBookmarks(IntercomBaseTest):
 
 
     def test_run(self):
-        # This test was failing for `companies` stream after reverting it to incremental as part of TDL-17006,
-        # so added it to untestable_streams and created card for the same.
-        # FIX CARD: https://jira.talendforge.org/browse/TDL-17035
-        untestable_streams = {"companies"}
-        expected_streams =  self.expected_streams().difference(untestable_streams)
+        expected_streams =  self.expected_streams()
 
         expected_replication_keys = self.expected_replication_keys()
         expected_replication_methods = self.expected_replication_method()
