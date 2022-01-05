@@ -68,7 +68,8 @@ class IntercomBaseTest(unittest.TestCase):
             },
             "companies": {
                 self.PRIMARY_KEYS: {"id"},
-                self.REPLICATION_METHOD: self.FULL_TABLE,
+                self.REPLICATION_METHOD: self.INCREMENTAL,
+                self.REPLICATION_KEYS: {"updated_at"}
             },
             "company_attributes": {
                 self.PRIMARY_KEYS: {"name"},
