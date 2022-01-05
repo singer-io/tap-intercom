@@ -35,9 +35,7 @@ def translate_state(state):
         # If bookmark is directly present without replication_key(old format)
         # then add replication key at inner level
         if isinstance(bookmark, str):
-            # Stream `companies` is changed from incremental to full_table
-            # so adding replication key used at incremental time to keep consistency.
-            replication_key = 'updated_at' if stream == "companies" else STREAMS[stream].replication_key
+            replication_key = STREAMS[stream].replication_key
             state["bookmarks"][stream] = {replication_key : bookmark}
 
     return state
