@@ -205,6 +205,8 @@ class IntercomClient(object):
         if not url and path:
             url = '{}/{}'.format(self.base_url, path)
 
+        LOGGER.info("URL: {} {}, Params: {}, JSON Body: {}".format(method, url, kwargs.get("params"), kwargs.get("json")))
+
         if 'endpoint' in kwargs:
             endpoint = kwargs['endpoint']
             del kwargs['endpoint']
