@@ -1,5 +1,10 @@
 # Changelog
 
+## 1 1.7
+ * Change company stream from Full to Incremental [#44](https://github.com/singer-io/tap-intercom/pull/44)
+ * Fix bookmark for conversation_parts stream [#45](https://github.com/singer-io/tap-intercom/pull/45)
+ * Make logger message more descriptive [#46](https://github.com/singer-io/tap-intercom/pull/46)
+ * Added missing fields for contact stream [#47](https://github.com/singer-io/tap-intercom/pull/47)
 ## 1.1.6
  * Fix OOM issue [#40] (https://github.com/singer-io/tap-intercom/pull/40)
 
