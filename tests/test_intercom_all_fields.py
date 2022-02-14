@@ -68,8 +68,9 @@ class AllFields(IntercomBaseTest):
 
                 # collect actual values
                 messages = synced_records.get(stream)
-                actual_all_keys = [set(message['data'].keys()) for message in messages['messages']
-                                   if message['action'] == 'upsert'][0]
+                actual_all_keys = set().union(
+                    *[set(message['data'].keys()) for message in messages['messages'] if message['action'] == 'upsert']
+                )
 
                 self.LOGGER.info(stream + "(Expected keys) ==> " + str(expected_all_keys))
                 self.LOGGER.info(stream + "(Expected automatic keys) ==> " + str(expected_automatic_keys))
@@ -82,6 +83,5 @@ class AllFields(IntercomBaseTest):
 
                 self.assertTrue(expected_automatic_keys.issubset(expected_all_keys),
                                 msg=f'{expected_automatic_keys - expected_all_keys} is not in "expected_all_keys"')
-
 
                 self.assertSetEqual(expected_all_keys, actual_all_keys)
