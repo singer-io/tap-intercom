@@ -42,14 +42,3 @@ workflows:
     jobs:
       - build:
           context: circleci-user
-  build_daily:
-    triggers:
-      - schedule:
-          cron: "0 14 * * *"
-          filters:
-            branches:
-              only:
-                - master
-    jobs:
-      - build:
-          context: circleci-user
