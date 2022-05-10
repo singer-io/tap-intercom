@@ -451,7 +451,7 @@ class ConversationParts(BaseStream):
 
         with metrics.record_counter(self.tap_stream_id) as counter:
             # Iterate over conversation_parts records
-            for record in self.get_records(state, bookmark_datetime):
+            for record in self.get_records(bookmark_datetime, state):
                 transform_times(record, schema_datetimes) # Transfrom datetimes fields of record
 
                 transformed_record = transform(record,
@@ -464,7 +464,7 @@ class ConversationParts(BaseStream):
             LOGGER.info("FINISHED Syncing: {}, total_records: {}.".format(self.tap_stream_id, counter.value))
         return state
 
-    def get_records(self, state, bookmark_datetime=None, is_parent=False) -> Iterator[list]:
+    def get_records(self, bookmark_datetime=None, is_parent=False, state={}) -> Iterator[list]:
 
         parent = self.parent(self.client) # Initialize parent object
         # Iterate over conversations

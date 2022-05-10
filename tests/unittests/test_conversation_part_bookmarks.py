@@ -26,7 +26,7 @@ class TestConversationPartsBookmarking(unittest.TestCase):
         conversation_part = ConversationParts(client)
 
         # Call get_records() of conversation_parts which writes bookmark
-        records = list(conversation_part.get_records({}, "test"))
+        records = list(conversation_part.get_records("test", {}))
 
         # Expected call of write_bookmark() function
         state = {'bookmarks': {'conversation_parts': {'updated_at': '2021-12-27T20:30:00.000000Z'}}}
