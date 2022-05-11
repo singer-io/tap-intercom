@@ -14,7 +14,7 @@ jobs:
             pip install coverage
       - run:
           name: 'pylint'
-          pylint: tap-intercom -d dangerous-default-value
+          pylint: tap-intercom -d dangerous-default-value, consider-using-f-string
           command: |
             source /usr/local/share/virtualenvs/tap-intercom/bin/activate
             make test
