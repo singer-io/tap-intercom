@@ -464,6 +464,7 @@ class ConversationParts(BaseStream):
             LOGGER.info("FINISHED Syncing: {}, total_records: {}.".format(self.tap_stream_id, counter.value))
         return state
 
+    # pylint: disable=dangerous-default-value
     def get_records(self, bookmark_datetime=None, is_parent=False, state={}) -> Iterator[list]:
 
         parent = self.parent(self.client) # Initialize parent object
