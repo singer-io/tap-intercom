@@ -1,8 +1,20 @@
 version: 2
-jobs:
-  build:
+orbs:
+  slack: circleci/slack@3.4.2
+
+executors:
+  docker-executor:
     docker:
       - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/circle-ci:stitch-tap-tester
+
+jobs:
+  build:
+    executor: docker-executor
+    steps:
+      - run: echo 'CI done'
+
+  ensure_env:
+    executor: docker-executor
     steps:
       - checkout
       - run:
@@ -12,11 +24,33 @@ jobs:
             source /usr/local/share/virtualenvs/tap-intercom/bin/activate
             pip install .[dev]
             pip install coverage
+      - slack/notify-on-failure:
+          only_for_branches: master
+      - persist_to_workspace:
+          root: /usr/local/share/virtualenvs
+          paths:
+            - tap-intercom
+
+  run_pylint:
+    executor: docker-executor
+    steps:
+      - checkout
+      - attach_workspace:
+          at: /usr/local/share/virtualenvs
       - run:
           name: 'pylint'
           command: |
             source /usr/local/share/virtualenvs/tap-intercom/bin/activate
             make test
+      - slack/notify-on-failure:
+          only_for_branches: master
+
+  run_unit_tests:
+    executor: docker-executor
+    steps:
+      - checkout
+      - attach_workspace:
+          at: /usr/local/share/virtualenvs
       - run:
           name: 'Unit Tests'
           command: |
@@ -27,18 +61,64 @@ jobs:
           path: test_output/report.xml
       - store_artifacts:
           path: htmlcov
-      - add_ssh_keys
+      - slack/notify-on-failure:
+          only_for_branches: master
+
+  run_integration_tests:
+    executor: docker-executor
+    parallelism: 4
+    steps:
+      - checkout
+      - attach_workspace:
+          at: /usr/local/share/virtualenvs
       - run:
-          name: 'Integration Tests'
+          name: 'Run Integration Tests'
+          no_output_timeout: 30m
           command: |
             aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev_env.sh
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
-            run-test --tap=tap-intercom tests
+            circleci tests glob "tests/*.py" | circleci tests split > ./tests-to-run
+            if [ -s ./tests-to-run ]; then
+              for test_file in $(cat ./tests-to-run)
+              do
+                run-test --tap=${CIRCLE_PROJECT_REPONAME} $test_file
+              done
+            fi
+      - slack/notify-on-failure:
+          only_for_branches: master
 
 workflows:
   version: 2
-  commit:
+  commit: &commit_jobs
     jobs:
+      - ensure_env:
+          context:
+            - circleci-user
+            - tap-tester-user
+      - run_pylint:
+          context:
+            - circleci-user
+            - tap-tester-user
+          requires:
+            - ensure_env
+      - run_unit_tests:
+          context:
+            - circleci-user
+            - tap-tester-user
+          requires:
+            - ensure_env
+      - run_integration_tests:
+          context:
+            - circleci-user
+            - tap-tester-user
+          requires:
+            - ensure_env
       - build:
-          context: circleci-user
+          context:
+            - circleci-user
+            - tap-tester-user
+          requires:
+            - run_pylint
+            - run_unit_tests
+            - run_integration_tests
