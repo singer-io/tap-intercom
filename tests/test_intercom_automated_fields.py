@@ -1,6 +1,8 @@
 """
 Test that with no fields selected for a stream automatic fields are still replicated
 """
+import unittest
+
 from tap_tester import runner, connections
 
 from base import IntercomBaseTest
@@ -13,6 +15,7 @@ class IntercomAutomaticFields(IntercomBaseTest):
     def name():
         return "tap_tester_intercom_automatic_fields"
 
+    @unittest.skip("Testing where rate limt is hit")
     def test_run(self):
         """
         Verify that for each stream you can get multiple pages of data
