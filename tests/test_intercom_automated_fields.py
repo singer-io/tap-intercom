@@ -23,10 +23,7 @@ class IntercomAutomaticFields(IntercomBaseTest):
         fetch of data.  For instance if you have a limit of 250 records ensure
         that 251 (or more) records have been posted for that stream.
         """
-        # This test was failing for `segments` stream, as there was no data to be found
-        # for currently configured start date. So added it to untestable_streams.
-        # Start date is configured to current value in base.py so that integration tests
-        # should finish quickly and don't run for hours
+        # Handled segments as part of separate test case.
         untestable_streams = {"segments"}
         expected_streams =  self.expected_streams().difference(untestable_streams)
 

@@ -14,10 +14,7 @@ class IntercomStartDateTest(IntercomBaseTest):
 
     def test_run(self):
         """Instantiate start date according to the desired data set and run the test"""
-        # This test was failing for `segments` stream, as there was no data to be found
-        # for currently configured start date. So added it to untestable_streams.
-        # Start date is configured to current value in base.py so that integration tests
-        # should finish quickly and don't run for hours
+        # Handled segments as part of separate test case.
         untestable_streams = {"segments"}
         expected_streams =  self.expected_streams().difference(untestable_streams)
 
@@ -103,10 +100,10 @@ class IntercomStartDateTest(IntercomBaseTest):
 
                 # Verify that the 2nd sync with a later start date replicates the same or less number of
                 # records as the 1st sync.
-                self.assertGreaterEqual(record_count_sync_1, record_count_sync_2)
+                self.assertGreater(record_count_sync_1, record_count_sync_2)
 
                 # Verify by primary key that atleast some common records are replicated in the 1st and 2nd syncs
-                self.assertNotEqual(primary_keys_sync_1.intersection(primary_keys_sync_2), set())
+                self.assertFalse(primary_keys_sync_1.isdisjoint(primary_keys_sync_2))
 
                 # Verify by replication key that atleast some common records are replicated in the 1st and 2nd syncs
-                self.assertNotEqual(replication_keys_sync_1.intersection(replication_keys_sync_2), set())
+                self.assertFalse(replication_keys_sync_1.isdisjoint(replication_keys_sync_2))

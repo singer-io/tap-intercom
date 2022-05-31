@@ -30,8 +30,7 @@ class IntercomBaseTest(unittest.TestCase):
     START_DATE_FORMAT = "%Y-%m-%dT00:00:00Z"
     BOOKMARK_COMPARISON_FORMAT = "%Y-%m-%dT00:00:00+00:00"
     LOGGER = get_logger()
-    DAYS = 10
-    DIFF = 2
+    DAYS = 5
     start_date= (dt.now()-timedelta(days=DAYS)).strftime(START_DATE_FORMAT)
 
     @staticmethod
@@ -47,7 +46,7 @@ class IntercomBaseTest(unittest.TestCase):
     def get_properties(self, original: bool = True):
         """Configuration properties required for the tap."""
         return_value = {
-            'start_date' : (dt.now()-timedelta(days=self.DAYS+self.DIFF)).strftime(self.START_DATE_FORMAT)
+            'start_date' : (dt.now()-timedelta(days=self.DAYS)).strftime(self.START_DATE_FORMAT)
         }
         if original:
             return return_value

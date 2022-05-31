@@ -42,7 +42,7 @@
       }
     },
     "remote_created_at": {
-      "type": ["null", "integer", "string"],
+      "type": ["null", "string"],
       "format": "date-time"
     },
     "segments": {
