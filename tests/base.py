@@ -30,7 +30,7 @@ class IntercomBaseTest(unittest.TestCase):
     START_DATE_FORMAT = "%Y-%m-%dT00:00:00Z"
     BOOKMARK_COMPARISON_FORMAT = "%Y-%m-%dT00:00:00+00:00"
     LOGGER = get_logger()
-    DAYS = 5
+    DAYS = 20
     start_date= (dt.now()-timedelta(days=DAYS)).strftime(START_DATE_FORMAT)
 
     @staticmethod

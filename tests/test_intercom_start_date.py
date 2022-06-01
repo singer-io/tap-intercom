@@ -100,7 +100,7 @@ class IntercomStartDateTest(IntercomBaseTest):
 
                 # Verify that the 2nd sync with a later start date replicates the same or less number of
                 # records as the 1st sync.
-                self.assertGreater(record_count_sync_1, record_count_sync_2)
+                self.assertGreaterEqual(record_count_sync_1, record_count_sync_2)
 
                 # Verify by primary key that atleast some common records are replicated in the 1st and 2nd syncs
                 self.assertFalse(primary_keys_sync_1.isdisjoint(primary_keys_sync_2))
