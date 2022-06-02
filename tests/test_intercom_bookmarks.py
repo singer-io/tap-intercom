@@ -65,13 +65,8 @@ class IntercomBookmarks(IntercomBaseTest):
 
 
     def test_run(self):
-        # This test was failing for `companies` stream after reverting it to incremental as part of TDL-17006,
-        # so added it to untestable_streams and created card for the same.
+        # Created card for untestable/unstable streams.
         # FIX CARD: https://jira.talendforge.org/browse/TDL-17035
-        # This test was failing for `segments` stream, as there was no data to be found
-        # for currently configured start date. So added it to untestable_streams.
-        # Start date is configured to current value in base.py so that integration tests
-        # should finish quickly and don't run for hours
         untestable_streams = {"companies", "segments"}
         expected_streams =  self.expected_streams().difference(untestable_streams)
 
@@ -167,6 +162,7 @@ class IntercomBookmarks(IntercomBaseTest):
                     second_bookmark_value = second_bookmark_key_value.get(replication_key)
                     first_bookmark_value_utc = self.convert_state_to_utc(first_bookmark_value)
                     second_bookmark_value_utc = self.convert_state_to_utc(second_bookmark_value)
+                    simulated_bookmark_value = self.convert_state_to_utc(new_states['bookmarks'][stream][replication_key])
 
                     # Verify the first sync sets a bookmark of the expected form
                     self.assertIsNotNone(first_bookmark_key_value)
@@ -189,21 +185,21 @@ class IntercomBookmarks(IntercomBaseTest):
                         )
 
                     for record in first_sync_messages:
+                        # Verify the second sync replication key value is Greater or Equal to the first sync bookmark
+                        replication_key_value = record.get(replication_key)
+                        self.assertGreaterEqual(replication_key_value, simulated_bookmark_value,
+                                                msg="Second sync records do not respect the previous bookmark.")
 
                         # Verify the first sync bookmark value is the max replication key value for a given stream
-                        replication_key_value = record.get(replication_key)
                         self.assertLessEqual(
                             replication_key_value, first_bookmark_value_utc,
                             msg="First sync bookmark was set incorrectly, a record with a greater replication-key value was synced."
                         )
 
-
                     # Verify the number of records in the 2nd sync is less then the first
                     self.assertLess(second_sync_count, first_sync_count)
 
-
                 elif expected_replication_method == self.FULL_TABLE:
-
 
                     # Verify the syncs do not set a bookmark for full table streams
                     self.assertIsNone(first_bookmark_key_value)
@@ -212,9 +208,7 @@ class IntercomBookmarks(IntercomBaseTest):
                     # Verify the number of records in the second sync is the same as the first
                     self.assertEqual(second_sync_count, first_sync_count)
 
-
                 else:
-
 
                     raise NotImplementedError(
                         "INVALID EXPECTATIONS\t\tSTREAM: {} REPLICATION_METHOD: {}".format(stream, expected_replication_method)

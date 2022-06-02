@@ -14,7 +14,8 @@ class IntercomStartDateTest(IntercomBaseTest):
 
     def test_run(self):
         """Instantiate start date according to the desired data set and run the test"""
-        # Handled segments as part of separate test case.
+        # Created card for untestable/unstable streams.
+        # FIX CARD: https://jira.talendforge.org/browse/TDL-17035
         untestable_streams = {"segments"}
         expected_streams =  self.expected_streams().difference(untestable_streams)
 
