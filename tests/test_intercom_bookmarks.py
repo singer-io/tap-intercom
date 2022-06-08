@@ -67,14 +67,14 @@ class IntercomBookmarks(IntercomBaseTest):
     def test_run(self):
         # Created card for untestable/unstable streams.
         # FIX CARD: https://jira.talendforge.org/browse/TDL-17035
-        untestable_streams = {"companies", "segments"}
+        untestable_streams = {"companies", "segments", "company_segments", "conversation_parts", "conversations"}
         expected_streams =  self.expected_streams().difference(untestable_streams)
-
+    
         expected_replication_keys = self.expected_replication_keys()
         expected_replication_methods = self.expected_replication_method()
 
         self.start_date_1 = self.get_properties().get("start_date")
-        self.start_date_2 = self.timedelta_formatted(self.start_date_1, days=30)
+        self.start_date_2 = self.timedelta_formatted(self.start_date_1, days=3)
 
         ##########################################################################
         ### First Sync
@@ -172,8 +172,8 @@ class IntercomBookmarks(IntercomBaseTest):
                     self.assertIsNotNone(second_bookmark_key_value)
                     self.assertIsNotNone(second_bookmark_key_value.get(replication_key))
 
-                    # Verify the second sync bookmark is Equal to the first sync bookmark
-                    self.assertEqual(second_bookmark_value, first_bookmark_value) # assumes no changes to data during test
+                    # Verify the second sync bookmark is Greater or Equal to the first sync bookmark
+                    self.assertGreaterEqual(second_bookmark_value, first_bookmark_value)
 
 
                     for record in second_sync_messages:

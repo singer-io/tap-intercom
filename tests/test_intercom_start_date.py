@@ -16,7 +16,7 @@ class IntercomStartDateTest(IntercomBaseTest):
         """Instantiate start date according to the desired data set and run the test"""
         # Created card for untestable/unstable streams.
         # FIX CARD: https://jira.talendforge.org/browse/TDL-17035
-        untestable_streams = {"segments"}
+        untestable_streams = {"segments", "companies"}
         expected_streams =  self.expected_streams().difference(untestable_streams)
 
         self.start_date_1 = self.get_properties().get('start_date')
