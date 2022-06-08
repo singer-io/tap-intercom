@@ -140,15 +140,9 @@ class IntercomBookmarks(IntercomBaseTest):
                 first_sync_messages = [record.get('data') for record in
                                        first_sync_records.get(stream, {}).get('messages',{})
                                        if record.get('action') == 'upsert']
-                if not first_sync_messages:
-                    self.LOGGER.info(msg=f"Skipping test case since no messages are found in First Sync for stream {stream}")
-                    continue
                 second_sync_messages = [record.get('data') for record in
                                         second_sync_records.get(stream, {}).get('messages',{})
                                         if record.get('action') == 'upsert']
-                if not second_sync_messages:
-                    self.LOGGER.info(msg=f"Skipping test case since no messages are found in Second Sync for stream {stream}")
-                    continue
                 first_bookmark_key_value = first_sync_bookmarks.get('bookmarks', {stream: None}).get(stream)
                 second_bookmark_key_value = second_sync_bookmarks.get('bookmarks', {stream: None}).get(stream)
 
