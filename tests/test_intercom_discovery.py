@@ -33,12 +33,27 @@ class DiscoveryTest(IntercomBaseTest):
         conn_id = connections.ensure_connection(self)
 
         found_catalogs = self.run_and_verify_check_mode(conn_id)
+        self.assertGreater(len(found_catalogs), 0, msg="No catalogs found")
 
         # Verify stream names follow naming convention
         # streams should only have lowercase alphas and underscores
         found_catalog_names = {c['tap_stream_id'] for c in found_catalogs}
         self.assertTrue(all([re.fullmatch(r"[a-z_]+",  name) for name in found_catalog_names]),
                         msg="One or more streams don't follow standard naming")
+
+        # Verify number of actual streams discovered match expected
+        self.assertEqual(
+            len(streams_to_test),
+            len(found_catalog_names),
+            msg="Number of actual streams ({0}) doesn't match with expected number of streams ({1}).)".format(len(found_catalog_names), len(streams_to_test))
+        )
+
+        # Verify the stream names discovered were what we expect
+        self.assertSetEqual(
+            set(streams_to_test),
+            set(found_catalog_names),
+            msg="Stream names doesn't match with the expectation."
+        )
 
         for stream in streams_to_test:
             with self.subTest(stream=stream):
@@ -66,9 +81,22 @@ class DiscoveryTest(IntercomBaseTest):
                     if item.get("metadata").get("inclusion") == "automatic"
                 )
 
+                # Get replication keys from metadata
+                actual_replication_keys = set(
+                    stream_properties[0].get(
+                        "metadata", {self.REPLICATION_KEYS: []}).get(self.REPLICATION_KEYS, [])
+                )
+
                 ##########################################################################
                 ### metadata assertions
                 ##########################################################################
+
+                # verify replication key(s)
+                self.assertSetEqual(
+                    actual_replication_keys,
+                    expected_replication_keys,
+                    msg=r"Replication keys don't match with expectation."
+                )
 
                 # verify there is only 1 top level breadcrumb in metadata
                 self.assertTrue(len(stream_properties) == 1,
