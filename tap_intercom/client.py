@@ -172,7 +172,7 @@ def raise_for_error(response):
     """Raises error class with appropriate msg for the response"""
     try:
         response_json = response.json() # retrieve json response
-    except Exception:
+    except Exception: # pylint: disable=broad-except
         response_json = {}
     errors = response_json.get('errors', [])
     status_code = response.status_code
