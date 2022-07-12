@@ -171,7 +171,7 @@ def get_exception_for_error_code(error_code, intercom_error_code):
 def raise_for_error(response):
     """Raises error class with appropriate msg for the response"""
     try:
-        response_json = response.json() # retrieve json response
+        response_json = response.json() # Retrieve json response
     except Exception: # pylint: disable=broad-except
         response_json = {}
     errors = response_json.get('errors', [])
@@ -179,7 +179,7 @@ def raise_for_error(response):
     intercom_error_code = ''
 
     #  https://developers.intercom.com/intercom-api-reference/reference/error-objects
-    if errors: # response containing `errors` object
+    if errors: # Response containing `errors` object
 
         if len(errors) > 1:
             message = "HTTP-error-code: {}, Error:{}".format(status_code,errors)
@@ -188,7 +188,7 @@ def raise_for_error(response):
             intercom_error_code = errors[0].get('code')
             message = "HTTP-error-code: {}, Error:{}".format(status_code,err_msg)
     else:
-        # prepare custom default error message
+        # Prepare custom default error message
         message = "HTTP-error-code: {}, Error: {}".format(status_code,
                 response_json.get("message", ERROR_CODE_EXCEPTION_MAPPING.get(
                 status_code, {}).get("message", "Unknown Error")))
