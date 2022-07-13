@@ -74,19 +74,23 @@ class IntercomUnprocessableEntityError(IntercomError):
     pass
 
 
-class IntercomInternalServiceError(IntercomError):
+class IntercomInternalServiceError(Server5xxError):
     pass
 
 
-class IntercomBadGatewayError(IntercomError):
+class IntercomRateLimitError(Server429Error):
     pass
 
 
-class IntercomServiceUnavailableError(IntercomError):
+class IntercomBadGatewayError(Server5xxError):
     pass
 
 
-class IntercomGatewayTimeoutError(IntercomError):
+class IntercomServiceUnavailableError(Server5xxError):
+    pass
+
+
+class IntercomGatewayTimeoutError(Server5xxError):
     pass
 
 
@@ -99,6 +103,10 @@ ERROR_CODE_EXCEPTION_MAPPING = {
     401: {
         "raise_exception": IntercomUnauthorizedError,
         "message": "The API Key was not authorized (or no API Key was found)."
+    },
+    402: {
+        "raise_exception": IntercomPaymentRequiredError,
+        "message": "The API is not available on your current plan."
     },
     403: {
         "raise_exception": IntercomForbiddenError,
@@ -134,7 +142,11 @@ ERROR_CODE_EXCEPTION_MAPPING = {
     },
     423: {
         "raise_exception": IntercomScrollExistsError,
-        "message": "The client has reached or exceeded a rate limit, or the server is overloaded."
+        "message": "The source or destination resource of a method is locked."
+    },
+    429: {
+        "raise_exception": IntercomRateLimitError,
+        "message": "The client has reached or exceeded a rate limit."
     },
     500: {
         "raise_exception": IntercomInternalServiceError,
@@ -228,7 +240,7 @@ class IntercomClient(object):
         self.__session.close()
 
     @backoff.on_exception(backoff.expo,
-                          (Server5xxError, ConnectionError, Server429Error),
+                          (Server5xxError, ConnectionError, IntercomRateLimitError),
                           max_tries=7,
                           factor=3)
     @utils.ratelimit(1000, 60)
@@ -259,7 +271,7 @@ class IntercomClient(object):
     #  https://developers.intercom.com/intercom-api-reference/reference#rate-limiting
     @backoff.on_exception(backoff.expo, Timeout, max_tries=5, factor=2) # Backoff for request timeout
     @backoff.on_exception(backoff.expo,
-                          (Server5xxError, ConnectionError, Server429Error, IntercomScrollExistsError),
+                          (Server5xxError, ConnectionError, IntercomRateLimitError, IntercomScrollExistsError),
                           max_tries=7,
                           factor=3)
     @utils.ratelimit(1000, 60)
