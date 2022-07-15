@@ -143,7 +143,7 @@ class IncrementalStream(BaseStream):
         """
 
         # check if the current stream has child stream or not
-        has_child = self.tap_stream_id in list(CHILD_STREAMS.keys())
+        has_child = self.tap_stream_id in CHILD_STREAMS
         # child stream class
         child_stream = STREAMS.get(CHILD_STREAMS.get(self.tap_stream_id))
 
