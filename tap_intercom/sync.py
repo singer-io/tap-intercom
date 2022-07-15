@@ -67,13 +67,6 @@ def sync(config, state, catalog):
             stream_metadata = metadata.to_map(stream.metadata)
 
             if stream.tap_stream_id in list(CHILD_STREAMS.values()):
-                # write schema for child stream as it will be synced by the parent stream
-                singer.write_schema(
-                    tap_stream_id,
-                    stream_schema,
-                    stream_obj.key_properties,
-                    stream.replication_key
-                )
                 continue
 
             LOGGER.info('Starting sync for stream: %s', tap_stream_id)

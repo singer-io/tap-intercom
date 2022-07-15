@@ -180,6 +180,14 @@ class IncrementalStream(BaseStream):
             child_stream_ = self.catalog.get_stream(child_stream.tap_stream_id)
             child_schema = child_stream_.schema.to_dict()
             child_metadata = metadata.to_map(child_stream_.metadata)
+            if is_child_selected:
+                # write schema for child stream as it will be synced by the parent stream
+                singer.write_schema(
+                    child_stream.tap_stream_id,
+                    child_schema,
+                    child_stream.key_properties,
+                    child_stream.replication_key
+                )
 
         schema_datetimes = find_datetimes_in_schema(stream_schema)
 
