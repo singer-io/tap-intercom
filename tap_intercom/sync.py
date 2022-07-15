@@ -4,7 +4,7 @@ from singer import Transformer, metadata
 
 
 from tap_intercom.client import IntercomClient
-from tap_intercom.streams import STREAMS
+from tap_intercom.streams import STREAMS, CHILD_STREAMS
 
 LOGGER = singer.get_logger()
 
@@ -49,12 +49,32 @@ def sync(config, state, catalog):
     # Translate state to new format with replication key in state
     state = translate_state(state)
 
+    selected_stream_names = []
+    selected_streams = list(catalog.get_selected_streams(state))
+    for stream in selected_streams:
+        selected_stream_names.append(stream.stream)
+
+    # loop over the parent-child stream and add parent stream to sync if child stream is selected and parent stream is not selected
+    for parent_stream, child_stream in CHILD_STREAMS.items():
+        if child_stream in selected_stream_names and parent_stream not in selected_stream_names:
+            selected_streams.append(catalog.get_stream(parent_stream))
+
     with Transformer() as transformer:
-        for stream in catalog.get_selected_streams(state):
+        for stream in selected_streams:
             tap_stream_id = stream.tap_stream_id
-            stream_obj = STREAMS[tap_stream_id](client)
+            stream_obj = STREAMS[tap_stream_id](client, catalog, selected_stream_names)
             stream_schema = stream.schema.to_dict()
             stream_metadata = metadata.to_map(stream.metadata)
+
+            if stream.tap_stream_id in list(CHILD_STREAMS.values()):
+                # write schema for child stream as it will be synced by the parent stream
+                singer.write_schema(
+                    tap_stream_id,
+                    stream_schema,
+                    stream_obj.key_properties,
+                    stream.replication_key
+                )
+                continue
 
             LOGGER.info('Starting sync for stream: %s', tap_stream_id)
 
