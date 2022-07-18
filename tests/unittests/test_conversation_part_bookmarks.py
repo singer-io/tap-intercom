@@ -41,8 +41,9 @@ class TestConversationPartsBookmarking(unittest.TestCase):
         client = IntercomClient('dummy_token', None)
         conversation_part = Conversations(client, Catalog(), ['conversations', 'conversation_parts'])
 
+        tap_state = {}
         # Call get_records() of conversation_parts which writes bookmark
-        list(conversation_part.sync({}, {}, {}, {'start_date': '2021-12-25T00:00:00Z'}, None))
+        list(conversation_part.sync(tap_state, {}, {}, {'start_date': '2021-12-25T00:00:00Z'}, None))
 
         # Expected call of write_bookmark() function
         state = {'bookmarks': {'conversation_parts': {'updated_at': '2021-12-27T20:30:00.000000Z'}, 'conversations': {'updated_at': '2021-12-27T20:30:00.000000Z'}}}
@@ -57,3 +58,5 @@ class TestConversationPartsBookmarking(unittest.TestCase):
 
         # Verify that write_bookmark() is called with expected values
         self.assertEquals(mocked_write_bookmark.mock_calls, expected_write_bookmark)
+        # Verify we get 'conversation_parts' bookmark
+        self.assertIsNotNone(tap_state.get('bookmarks').get('conversation_parts'))

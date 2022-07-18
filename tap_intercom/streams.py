@@ -171,11 +171,7 @@ class IncrementalStream(BaseStream):
             else:
                 return state
 
-        LOGGER.info("Stream: {}, initial max_bookmark_value: {}".format(self.tap_stream_id, start_date))
-        max_datetime = start_date
-
-        # create child stream object and generate schema
-        if has_child:
+            # create child stream object and generate schema
             child_stream_obj = child_stream(self.client, self.catalog, self.selected_streams)
             child_stream_ = self.catalog.get_stream(child_stream.tap_stream_id)
             child_schema = child_stream_.schema.to_dict()
@@ -188,6 +184,9 @@ class IncrementalStream(BaseStream):
                     child_stream.key_properties,
                     child_stream.replication_key
                 )
+
+        LOGGER.info("Stream: {}, initial max_bookmark_value: {}".format(self.tap_stream_id, start_date))
+        max_datetime = start_date
 
         schema_datetimes = find_datetimes_in_schema(stream_schema)
 
