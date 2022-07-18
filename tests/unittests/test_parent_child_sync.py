@@ -50,7 +50,7 @@ class TestParentChildSync(unittest.TestCase):
         ['parent_selected', ['conversations'], {'stream': 'conversations'}],
         ['child_selected', ['conversation_parts'], {'stream': 'conversations'}]
     ])
-    @mock.patch('tap_intercom.streams.IncrementalStream.sync')
+    @mock.patch('tap_intercom.streams.IncrementalStream.sync', return_value = {})
     def test_sync(self, name, test_data, expected_data, mocked_sync):
         """
             Test case to verify we add parent stream to sync if
