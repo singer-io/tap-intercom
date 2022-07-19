@@ -27,6 +27,7 @@ setup(name='tap-intercom',
               'pylint',
               'ipdb',
               'nose',
+              'parameterized'
           ]
       }
       )
