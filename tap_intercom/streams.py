@@ -4,6 +4,7 @@ This module defines the stream classes and their individual sync logic.
 
 
 import datetime
+import hashlib
 from typing import Iterator
 
 import singer
@@ -62,6 +63,27 @@ class BaseStream:
         # pylint: disable=not-callable
         parent = self.parent(self.client)
         return parent.get_records(bookmark_datetime, is_parent=True)
+
+    def generate_record_hash(self, original_record):
+        """
+            Function to generate the hash of name, full_name and label to use it as a Primary Key
+        """
+        # There are 2 types for data_attributes in Intercom
+        # -> Default: As discussed with support, there is 'id' for custom data_attributes and ther will be unique
+        # -> Custom: Used 'name' and 'description' for identifying the data uniquely
+        fields_to_hash = ['id', 'name', 'description']
+        hash_string = ''
+
+        for key in original_record:
+            if key in fields_to_hash:
+                hash_string += str(original_record.get(key, ''))
+
+        hash_string_bytes = hash_string.encode('utf-8')
+        hashed_string = hashlib.sha256(hash_string_bytes).hexdigest()
+
+        # Add Primary Key hash in the record
+        original_record['_sdc_record_hash'] = hashed_string
+        return original_record
 
     @staticmethod
     def epoch_milliseconds_to_dt_str(timestamp: float) -> str:
@@ -174,6 +196,10 @@ class FullTableStream(BaseStream):
 
         with metrics.record_counter(self.tap_stream_id) as counter:
             for record in self.get_records():
+
+                if self.tap_stream_id in ['company_attributes', 'contact_attributes']:
+                    record = self.generate_record_hash(record)
+
                 transform_times(record, schema_datetimes)
 
                 transformed_record = transform(record,
@@ -282,7 +308,7 @@ class CompanyAttributes(FullTableStream):
     Docs: https://developers.intercom.com/intercom-api-reference/v2.0/reference#list-data-attributes
     """
     tap_stream_id = 'company_attributes'
-    key_properties = ['name']
+    key_properties = ['_sdc_record_hash']
     path = 'data_attributes'
     params = {'model': 'company'}
     data_key = 'data'
@@ -496,7 +522,7 @@ class ContactAttributes(FullTableStream):
     Docs: https://developers.intercom.com/intercom-api-reference/v2.0/reference#list-data-attributes
     """
     tap_stream_id = 'contact_attributes'
-    key_properties = ['name']
+    key_properties = ['_sdc_record_hash']
     path = 'data_attributes'
     params = {'model': 'contact'}
     data_key = 'data'
