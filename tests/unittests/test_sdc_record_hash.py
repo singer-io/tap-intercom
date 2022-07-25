@@ -23,16 +23,17 @@ class TestSDCRecordHash(unittest.TestCase):
         self.assertIsNotNone(hashed_records.get('_sdc_record_hash'))
 
     @parameterized.expand([
-        ['company_attr', CompanyAttributes, True],
-        ['contact_attr', ContactAttributes, True],
-        ['admins', Admins, False],
+        ['company_attr', CompanyAttributes, [True, 4]],
+        ['contact_attr', ContactAttributes, [True, 4]],
+        ['admins', Admins, [False, 0]],
     ])
     @mock.patch('singer.write_record')
+    @mock.patch('singer.write_message')
     @mock.patch('tap_intercom.streams.transform', side_effect = transform)
     @mock.patch('tap_intercom.streams.CompanyAttributes.get_records', side_effect = [[{'id': 1, 'name': 'test1'}, {'id': 2, 'name': 'test2'}]])
     @mock.patch('tap_intercom.streams.ContactAttributes.get_records', side_effect = [[{'id': 1, 'name': 'test1'}, {'id': 2, 'name': 'test2'}]])
     @mock.patch('tap_intercom.streams.Admins.get_records', side_effect = [[{'id': 1, 'name': 'test1'}, {'id': 2, 'name': 'test2'}]])
-    def test_sync_hashed(self, name, test_data, expected_data, mocked_admins_get_records, mocked_contacts_attr_get_records, mocked_company_attr_get_records, mocked_transform, mocked_write_record):
+    def test_sync_hashed(self, name, test_data, expected_data, mocked_admins_get_records, mocked_contacts_attr_get_records, mocked_company_attr_get_records, mocked_transform, mocked_write_message, mocked_write_record):
         client = IntercomClient('test_access_token', 300)
         stream = test_data(client)
         stream.sync({}, {}, {}, {}, None)
@@ -41,4 +42,9 @@ class TestSDCRecordHash(unittest.TestCase):
 
         self.assertIsNotNone(write_record_calls)
         for call in write_record_calls:
-            self.assertEqual(call[1][1].get('_sdc_record_hash') is not None, expected_data)
+            self.assertEqual(call[1][1].get('_sdc_record_hash') is not None, expected_data[0])
+
+        # Verify we called write_message for company and contact attributes
+        self.assertEqual(mocked_write_message.called, expected_data[0])
+        # Verify the call count for company and contact attributes
+        self.assertEqual(mocked_write_message.call_count, expected_data[1])
