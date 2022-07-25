@@ -5,6 +5,7 @@ This module defines the stream classes and their individual sync logic.
 
 import datetime
 import hashlib
+import time
 from typing import Iterator
 
 import singer
@@ -182,7 +183,8 @@ class FullTableStream(BaseStream):
              stream_schema: dict,
              stream_metadata: dict,
              config: dict,
-             transformer: Transformer) -> dict:
+             transformer: Transformer,
+             sync_with_version: bool = False) -> dict:
         """
         The sync logic for an full table stream.
 
@@ -190,9 +192,17 @@ class FullTableStream(BaseStream):
         :param stream_schema: A dictionary containing the stream schema
         :param stream_metadata: A dictionnary containing stream metadata
         :param config: A dictionary containing tap config data
+        :param sync_with_version: Boolean flag to do sync with activate version for Company and Contact Attributes streams
         :return: State data in the form of a dictionary
         """
         schema_datetimes = find_datetimes_in_schema(stream_schema)
+        if sync_with_version:
+            # Write activate version message
+            activate_version = int(time.time() * 1000)
+            activate_version_message = singer.ActivateVersionMessage(
+                stream=self.tap_stream_id,
+                version=activate_version)
+            singer.write_message(activate_version_message)
 
         with metrics.record_counter(self.tap_stream_id) as counter:
             for record in self.get_records():
@@ -207,7 +217,11 @@ class FullTableStream(BaseStream):
                                                 integer_datetime_fmt=UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING,
                                                 metadata=stream_metadata)
                 # Write records with time_extracted field
-                singer.write_record(self.tap_stream_id, transformed_record, time_extracted=singer.utils.now())
+                if sync_with_version:
+                    # Using "write_message" if the version is found as, "write_record" params does not contain "version"
+                    singer.write_message(singer.RecordMessage(stream=self.tap_stream_id, record=transformed_record, version=activate_version, time_extracted=singer.utils.now()))
+                else:
+                    singer.write_record(self.tap_stream_id, transformed_record, time_extracted=singer.utils.now())
                 counter.increment()
 
             LOGGER.info("FINISHED Syncing: {}, total_records: {}.".format(self.tap_stream_id, counter.value))
@@ -312,6 +326,12 @@ class CompanyAttributes(FullTableStream):
     path = 'data_attributes'
     params = {'model': 'company'}
     data_key = 'data'
+
+    def sync(self, state: dict, stream_schema: dict, stream_metadata: dict, config: dict, transformer: Transformer, sync_with_version: bool = False) -> dict:
+        # Sync with activate version
+        # As we are preparing the hash of ['id', 'name', 'description'] and using it as the Primary Key and there are chances
+        # of field value being updated, thus, on the target side, there will be the redundant entry of the same record.
+        return super().sync(state, stream_schema, stream_metadata, config, transformer, sync_with_version = True)
 
     def get_records(self, bookmark_datetime=None, is_parent=False) -> Iterator[list]:
         paging = True
@@ -526,6 +546,12 @@ class ContactAttributes(FullTableStream):
     path = 'data_attributes'
     params = {'model': 'contact'}
     data_key = 'data'
+
+    def sync(self, state: dict, stream_schema: dict, stream_metadata: dict, config: dict, transformer: Transformer, sync_with_version: bool = False) -> dict:
+        # Sync with activate version
+        # As we are preparing the hash of ['id', 'name', 'description'] and using it as the Primary Key and there are chances
+        # of field value being updated, thus, on the target side, there will be the redundant entry of the same record.
+        return super().sync(state, stream_schema, stream_metadata, config, transformer, sync_with_version = True)
 
     def get_records(self, bookmark_datetime=None, is_parent=False) -> Iterator[list]:
         LOGGER.info("Syncing: {}".format(self.tap_stream_id))
