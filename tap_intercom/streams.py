@@ -226,6 +226,10 @@ class FullTableStream(BaseStream):
 
             LOGGER.info("FINISHED Syncing: {}, total_records: {}.".format(self.tap_stream_id, counter.value))
 
+        # Write activate version after syncing
+        if sync_with_version:
+            singer.write_message(activate_version_message)
+
         return state
 
 
