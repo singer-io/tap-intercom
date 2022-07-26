@@ -15,6 +15,9 @@ class TestSDCRecordHash(unittest.TestCase):
         ['custom_attr_without_description', {'id': 11, 'name': 'test 1', 'label': 'test1'}],
     ])
     def test_generate_hash(self, name, test_data):
+        """
+            Test cases to verify we generate a hash of id, name and description and add it in the '_sdc_record_hash' field
+        """
         client = IntercomClient('test_access_token', 300)
         stream = BaseStream(client)
         hashed_records = stream.generate_record_hash(test_data)
@@ -34,6 +37,9 @@ class TestSDCRecordHash(unittest.TestCase):
     @mock.patch('tap_intercom.streams.ContactAttributes.get_records', side_effect = [[{'id': 1, 'name': 'test1'}, {'id': 2, 'name': 'test2'}]])
     @mock.patch('tap_intercom.streams.Admins.get_records', side_effect = [[{'id': 1, 'name': 'test1'}, {'id': 2, 'name': 'test2'}]])
     def test_sync_hashed(self, name, test_data, expected_data, mocked_admins_get_records, mocked_contacts_attr_get_records, mocked_company_attr_get_records, mocked_transform, mocked_write_message, mocked_write_record):
+        """
+            Test cases to verify we generate hash of fields for company and contact attributes streams
+        """
         client = IntercomClient('test_access_token', 300)
         stream = test_data(client)
         stream.sync({}, {}, {}, {}, None)
