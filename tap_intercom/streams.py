@@ -149,13 +149,13 @@ class IncrementalStream(BaseStream):
 
         # get current stream bookmark
         parent_bookmark = singer.get_bookmark(state, self.tap_stream_id, self.replication_key, config['start_date'])
-        start_date = singer.utils.strptime_to_utc(parent_bookmark)
+        sync_start_date = singer.utils.strptime_to_utc(parent_bookmark)
 
         is_parent_selected = True
         is_child_selected = False
 
-        # if the current stream has child stream, then get the child stream's bookmark and
-        # update the sync start date to minimum of parent bookmark or child bookmark
+        # If the current stream has a child stream, then get the child stream's bookmark
+        # and update the sync start date to minimum of parent bookmark or child bookmark
         if has_child:
             child_bookmark = singer.get_bookmark(state, child_stream.tap_stream_id, self.replication_key, config['start_date'])
 
@@ -163,11 +163,11 @@ class IncrementalStream(BaseStream):
             is_child_selected = child_stream.tap_stream_id in self.selected_streams
 
             if is_parent_selected and is_child_selected:
-                start_date = min(singer.utils.strptime_to_utc(parent_bookmark), singer.utils.strptime_to_utc(child_bookmark))
+                sync_start_date = min(singer.utils.strptime_to_utc(parent_bookmark), singer.utils.strptime_to_utc(child_bookmark))
             elif is_parent_selected:
-                start_date = singer.utils.strptime_to_utc(parent_bookmark)
+                sync_start_date = singer.utils.strptime_to_utc(parent_bookmark)
             elif is_child_selected:
-                start_date = singer.utils.strptime_to_utc(child_bookmark)
+                sync_start_date = singer.utils.strptime_to_utc(child_bookmark)
             else:
                 return state
 
@@ -177,7 +177,7 @@ class IncrementalStream(BaseStream):
             child_schema = child_stream_.schema.to_dict()
             child_metadata = metadata.to_map(child_stream_.metadata)
             if is_child_selected:
-                # write schema for child stream as it will be synced by the parent stream
+                # Write schema for child stream as it will be synced by the parent stream
                 singer.write_schema(
                     child_stream.tap_stream_id,
                     child_schema,
@@ -185,13 +185,13 @@ class IncrementalStream(BaseStream):
                     child_stream.replication_key
                 )
 
-        LOGGER.info("Stream: {}, initial max_bookmark_value: {}".format(self.tap_stream_id, start_date))
-        max_datetime = start_date
+        LOGGER.info("Stream: {}, initial max_bookmark_value: {}".format(self.tap_stream_id, sync_start_date))
+        max_datetime = sync_start_date
 
         schema_datetimes = find_datetimes_in_schema(stream_schema)
 
         with metrics.record_counter(self.tap_stream_id) as counter:
-            for record in self.get_records(start_date):
+            for record in self.get_records(sync_start_date):
                 transform_times(record, schema_datetimes)
 
                 record_datetime = singer.utils.strptime_to_utc(
@@ -200,17 +200,17 @@ class IncrementalStream(BaseStream):
                     )
 
                 # write record if parent is selected
-                if is_parent_selected and record_datetime >= start_date:
+                if is_parent_selected and record_datetime >= sync_start_date:
                     transformed_record = transform(record,
                                                     stream_schema,
                                                     integer_datetime_fmt=UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING,
                                                     metadata=stream_metadata)
-                    # Write records with time_extracted field
+                    # Write record if a parent is selected
                     singer.write_record(self.tap_stream_id, transformed_record, time_extracted=singer.utils.now())
                     counter.increment()
                     max_datetime = max(record_datetime, max_datetime)
 
-                # sync child stream, if child is selected
+                # Sync child stream, if the child is selected
                 if has_child and is_child_selected:
                     state = child_stream_obj.sync_substream(record.get('id'), child_schema, child_metadata, record[self.replication_key], state)
 

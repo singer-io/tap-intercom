@@ -9,14 +9,24 @@ class Schema:
         self.stream = stream
 
     def to_dict(self):
-        return {}
+        return {'stream': self.stream}
 
 class Stream:
-    def __init__(self, stream):
-        self.schema = Schema(stream)
+    def __init__(self, stream_name):
+        self.tap_stream_id = stream_name
+        self.stream = stream_name
+        self.replication_key = 'updated_at'
+        self.schema = Schema(stream_name)
         self.metadata = {}
 
 class Catalog:
+    def __init__(self, streams):
+        self.streams = streams
+
+    def get_selected_streams(self, state):
+        for stream in self.streams:
+            yield Stream(stream)
+
     def get_stream(self, stream_name):
         return Stream(stream_name)
 

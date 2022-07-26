@@ -5,35 +5,7 @@ from tap_intercom.client import IntercomClient
 from tap_intercom.streams import Conversations
 from tap_intercom.sync import sync
 import singer
-
-# Mock class for stream schema
-class Schema:
-    def __init__(self, stream_name):
-        self.stream_name = stream_name
-
-    def to_dict(self):
-        return {'stream': self.stream_name}
-
-# Mock class for streams
-class Stream:
-    def __init__(self, stream_name):
-        self.tap_stream_id = stream_name
-        self.stream = stream_name
-        self.replication_key = 'updated_at'
-        self.schema = Schema(stream_name)
-        self.metadata = {}
-
-# Mock class for catalog
-class Catalog:
-    def __init__(self, streams):
-        self.streams = streams
-
-    def get_selected_streams(self, state):
-        for stream in self.streams:
-            yield Stream(stream)
-
-    def get_stream(self, stream_name):
-        return Stream(stream_name)
+from test_conversation_part_bookmarks import Catalog
 
 # Mock function for transform
 def transform(*args, **kwargs):
@@ -51,7 +23,7 @@ class TestParentChildSync(unittest.TestCase):
         ['child_selected', ['conversation_parts'], {'stream': 'conversations'}]
     ])
     @mock.patch('tap_intercom.streams.IncrementalStream.sync', return_value = {})
-    def test_sync(self, name, test_data, expected_data, mocked_sync):
+    def test_parent_child_selection(self, name, test_data, expected_data, mocked_sync):
         """
             Test case to verify we add parent stream to sync if
             child is selected and parent stream is not selected
@@ -63,15 +35,18 @@ class TestParentChildSync(unittest.TestCase):
 
     @parameterized.expand([
         ['parent_child_selected_start_date', [['conversations', 'conversation_parts'], {}], '2021-01-01'],
-        ['parent_child_selected_state', [['conversations', 'conversation_parts'], {'bookmarks': {'conversation_parts': {'updated_at': '2021-01-02'}, 'conversations': {'updated_at': '2021-01-03'}}}], '2021-01-02'],
+        ['parent_child_selected_state', [['conversations', 'conversation_parts'], {'bookmarks': {'conversation_parts': {'updated_at': '2021-01-02'}, \
+            'conversations': {'updated_at': '2021-01-03'}}}], '2021-01-02'],
         ['parent_selected_start_date', [['conversations'], {}], '2021-01-01'],
-        ['parent_selected_state', [['conversations'], {'bookmarks': {'conversation_parts': {'updated_at': '2021-01-02'}, 'conversations': {'updated_at': '2021-01-03'}}}], '2021-01-03'],
+        ['parent_selected_state', [['conversations'], {'bookmarks': {'conversation_parts': {'updated_at': '2021-01-02'}, \
+            'conversations': {'updated_at': '2021-01-03'}}}], '2021-01-03'],
         ['child_selected_start_date', [['conversation_parts'], {}], '2021-01-01'],
-        ['child_selected_state', [['conversation_parts'], {'bookmarks': {'conversation_parts': {'updated_at': '2021-01-02'}, 'conversations': {'updated_at': '2021-01-03'}}}], '2021-01-02'],
+        ['child_selected_state', [['conversation_parts'], {'bookmarks': {'conversation_parts': {'updated_at': '2021-01-02'}, \
+            'conversations': {'updated_at': '2021-01-03'}}}], '2021-01-02'],
     ])
     @mock.patch('singer.write_schema')
     @mock.patch('tap_intercom.streams.Conversations.get_records')
-    def test_syncing(self, name, test_data, expected_data, mocked_get_records, mocked_write_schema):
+    def test_parent_child_records_sync(self, name, test_data, expected_data, mocked_get_records, mocked_write_schema):
         """
             Test case to verify we set expected start date to sync for parent-child streams
         """
@@ -121,3 +96,15 @@ class TestParentChildWriteRecords(unittest.TestCase):
         conversations.sync({}, {}, {}, config, None)
         self.assertEqual(mocked_transform.call_count, 1)
         self.assertEqual(mocked_sync_substream.call_count, 1)
+
+    def test_parent_and_child_stream_not_selected_records_writing(self, mocked_sync_substream, mocked_transform, mocked_get_records, mocked_write_schema):
+        """
+            Test case to verify we write parent and child records if both streams are selected
+        """
+        client = IntercomClient('test_access_token', 300)
+        conversations = Conversations(client, Catalog(['test']), ['test'])
+        config = {'start_date': '2021-01-01'}
+        state = conversations.sync({}, {}, {}, config, None)
+        self.assertEqual(state, {})
+        self.assertEqual(mocked_transform.call_count, 0)
+        self.assertEqual(mocked_sync_substream.call_count, 0)

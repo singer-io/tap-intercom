@@ -49,23 +49,27 @@ def sync(config, state, catalog):
     # Translate state to new format with replication key in state
     state = translate_state(state)
 
+    # List of the streams that are not selected, but needs to sync
+    # For eg. parent stream when the child stream is selected
+    streams_to_sync = []
     selected_stream_names = []
     selected_streams = list(catalog.get_selected_streams(state))
     for stream in selected_streams:
-        selected_stream_names.append(stream.stream)
+        selected_stream_names.append(stream.tap_stream_id)
 
-    # loop over the parent-child stream and add parent stream to sync if child stream is selected and parent stream is not selected
+    # Loop over the parent-child stream and add the parent stream to sync if the child stream is selected and the parent stream is not selected
     for parent_stream, child_stream in CHILD_STREAMS.items():
         if child_stream in selected_stream_names and parent_stream not in selected_stream_names:
-            selected_streams.append(catalog.get_stream(parent_stream))
+            streams_to_sync.append(catalog.get_stream(parent_stream))
 
     with Transformer() as transformer:
-        for stream in selected_streams:
+        for stream in selected_streams + streams_to_sync:
             tap_stream_id = stream.tap_stream_id
             stream_obj = STREAMS[tap_stream_id](client, catalog, selected_stream_names)
             stream_schema = stream.schema.to_dict()
             stream_metadata = metadata.to_map(stream.metadata)
 
+            # Skip child stream sync as it will be synced through the parent stream
             if stream.tap_stream_id in list(CHILD_STREAMS.values()):
                 continue
 
