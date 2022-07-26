@@ -99,7 +99,7 @@ class TestParentChildWriteRecords(unittest.TestCase):
 
     def test_parent_and_child_stream_not_selected_records_writing(self, mocked_sync_substream, mocked_transform, mocked_get_records, mocked_write_schema):
         """
-            Test case to verify we write parent and child records if both streams are selected
+            Test case to verify does not write any records when parent and child both streams are not selected
         """
         client = IntercomClient('test_access_token', 300)
         conversations = Conversations(client, Catalog(['test']), ['test'])

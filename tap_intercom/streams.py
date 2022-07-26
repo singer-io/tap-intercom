@@ -199,7 +199,7 @@ class IncrementalStream(BaseStream):
                         record[self.replication_key])
                     )
 
-                # write record if parent is selected
+                # write record if the parent is selected
                 if is_parent_selected and record_datetime >= sync_start_date:
                     transformed_record = transform(record,
                                                     stream_schema,
