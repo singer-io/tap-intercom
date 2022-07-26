@@ -55,7 +55,7 @@ class IntercomAutomaticFields(IntercomBaseTest):
                 # collect actual values
                 data = synced_records.get(stream, {})
                 record_messages_keys = [set(row.get('data').keys()) for row in data.get('messages', {})
-                                        if row.get['messages']['action'] == 'upsert']
+                                        if row['action'] == 'upsert']
 
 
                 # Verify that you get some records for each stream
