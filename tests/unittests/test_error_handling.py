@@ -103,3 +103,29 @@ class TestResponseErrorHandling(unittest.TestCase):
             self.client.request(self.method, self.path, self.url)
 
         self.assertEqual(str(e.exception), expected_data)
+
+class TestJsonDecodeError(unittest.TestCase):
+    """Test Case to Verify JSON Decode Error"""
+
+    intercom_client = IntercomClient(config_request_timeout= "", access_token="test_access_token")
+    method = 'GET'
+    path = 'path'
+    url = 'url'
+
+    @mock.patch("time.sleep")
+    @mock.patch("requests.Session.request")
+    @mock.patch("tap_intercom.client.IntercomClient.check_access_token")
+    def test_json_decode_failed_4XX(self, mocked_api_token, mocked_jsondecode_failure, mocked_sleep):
+        """
+        Exception with Unknown error message should be raised if invalid JSON response returned with 4XX error
+        """
+        json_decode_error_str = "json_error"
+        mocked_jsondecode_failure.return_value = get_mock_http_response(
+            400, json_decode_error_str)
+
+        expected_message = "HTTP-error-code: 400, Error: General client error, possibly malformed data."
+
+        with self.assertRaises(client.IntercomBadRequestError) as e:
+            self.intercom_client.request(self.method, self.path, self.url)
+
+        self.assertEqual(str(e.exception), expected_message)
