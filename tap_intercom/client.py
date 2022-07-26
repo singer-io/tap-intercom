@@ -174,10 +174,7 @@ def get_exception_for_error_code(error_code, intercom_error_code):
 
     exception = ERROR_CODE_EXCEPTION_MAPPING.get(error_code, {}).get("raise_exception")
     if not exception:
-        if error_code >= 500:
-            exception = Server5xxError
-        else:
-            exception = IntercomError
+        exception = Server5xxError if error_code >= 500 else IntercomError
     return exception
 
 def raise_for_error(response):
