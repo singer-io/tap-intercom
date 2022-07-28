@@ -1,5 +1,5 @@
 from unittest import mock
-from tap_intercom.client import IntercomClient, IntercomBadRequestError
+from tap_intercom.client import IntercomClient, IntercomError, IntercomBadRequestError
 import unittest
 import requests,json
 from parameterized import parameterized
@@ -45,7 +45,7 @@ class TestResponse(unittest.TestCase):
 
         expected_message = "HTTP-error-code: 400, Error: General client error, possibly malformed data."
 
-        with self.assertRaises(IntercomBadRequestError) as e:
+        with self.assertRaises(IntercomError) as e:
             self.intercom_client.check_access_token()
 
         self.assertEqual(str(e.exception), expected_message)
