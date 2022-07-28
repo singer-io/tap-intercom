@@ -78,7 +78,7 @@ class IntercomBaseTest(unittest.TestCase):
                 self.REPLICATION_KEYS: {"updated_at"}
             },
             "company_attributes": {
-                self.PRIMARY_KEYS: {"_sdc_name_hash"},
+                self.PRIMARY_KEYS: {"name"},
                 self.REPLICATION_METHOD: self.FULL_TABLE
             },
             "company_segments": {
@@ -97,7 +97,7 @@ class IntercomBaseTest(unittest.TestCase):
                 self.REPLICATION_KEYS: {"updated_at"}
             },
             "contact_attributes": {
-                self.PRIMARY_KEYS: {"_sdc_name_hash"},
+                self.PRIMARY_KEYS: {"name"},
                 self.REPLICATION_METHOD: self.FULL_TABLE
             },
             "contacts": {
