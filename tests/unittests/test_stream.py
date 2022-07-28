@@ -50,13 +50,12 @@ class TestData(unittest.TestCase):
         """
             Verify expected epoch time with UTC datetime 
         """
-        date_time_str= "2019-09-27T22:34:39.000000Z"
-        converted_datetime = datetime.strptime(date_time_str,"%Y-%m-%dT%H:%M:%S.%fZ")
-        expected_epoch = 1569603879.0 # expected epoch for `2019-09-27T22:34:39.000000Z`
+        date_time_str= "2021-08-12T22:59:57-07:00"
+        converted_datetime = datetime.strptime(date_time_str,"%Y-%m-%dT%H:%M:%S-%f:00")
+        expected_epoch = 1628789397.07 # expected epoch for `2021-08-12T22:59:57-07:00`
 
         test_epoch = BaseStream.dt_to_epoch_seconds(converted_datetime)
 
-        # Verify that test epoch time is converted to valid UTC datetime
         self.assertEqual(test_epoch,expected_epoch)
     
     @mock.patch("tap_intercom.client.IntercomClient.get")
