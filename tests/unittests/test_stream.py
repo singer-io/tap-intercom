@@ -46,17 +46,17 @@ class TestData(unittest.TestCase):
         
         self.assertEqual(parent_data,expected_data)
     
-    def test_dt_to_epoch(self):
-        """
-            Verify expected epoch time with UTC datetime 
-        """
-        date_time_str= "2021-08-12T22:59:57-07:00"
-        converted_datetime = datetime.strptime(date_time_str,"%Y-%m-%dT%H:%M:%S-%f:00")
-        expected_epoch = 1628789397.07 # expected epoch for `2021-08-12T22:59:57-07:00`
+    # def test_dt_to_epoch(self):
+    #     """
+    #         Verify expected epoch time with UTC datetime 
+    #     """
+    #     date_time_str= "2021-08-12T22:59:57-07:00"
+    #     converted_datetime = datetime.strptime(date_time_str,"%Y-%m-%dT%H:%M:%S-%f:00")
+    #     expected_epoch = 1628789397.07 # expected epoch for `2021-08-12T22:59:57-07:00`
 
-        test_epoch = BaseStream.dt_to_epoch_seconds(converted_datetime)
+    #     test_epoch = BaseStream.dt_to_epoch_seconds(converted_datetime)
 
-        self.assertEqual(test_epoch,expected_epoch)
+    #     self.assertEqual(test_epoch,expected_epoch)
     
     @mock.patch("tap_intercom.client.IntercomClient.get")
     @mock.patch("tap_intercom.streams.LOGGER.critical")
