@@ -2,6 +2,7 @@
 Setup expectations for test sub classes
 Run discovery for as a prerequisite for most tests
 """
+import time
 import unittest
 import os
 from datetime import timedelta
@@ -28,6 +29,11 @@ class IntercomBaseTest(unittest.TestCase):
     INCREMENTAL = "INCREMENTAL"
     FULL_TABLE = "FULL_TABLE"
     START_DATE_FORMAT = "%Y-%m-%dT00:00:00Z"
+    RECORD_REPLICATION_KEY_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
+    DATETIME_FMT = {
+        "%Y-%m-%dT%H:%M:%SZ",
+        "%Y-%m-%dT%H:%M:%S.000000Z"
+    }
     BOOKMARK_COMPARISON_FORMAT = "%Y-%m-%dT00:00:00+00:00"
     LOGGER = get_logger()
     DAYS = 20
@@ -72,7 +78,7 @@ class IntercomBaseTest(unittest.TestCase):
                 self.REPLICATION_KEYS: {"updated_at"}
             },
             "company_attributes": {
-                self.PRIMARY_KEYS: {"name"},
+                self.PRIMARY_KEYS: {"_sdc_name_hash"},
                 self.REPLICATION_METHOD: self.FULL_TABLE
             },
             "company_segments": {
@@ -91,7 +97,7 @@ class IntercomBaseTest(unittest.TestCase):
                 self.REPLICATION_KEYS: {"updated_at"}
             },
             "contact_attributes": {
-                self.PRIMARY_KEYS: {"name"},
+                self.PRIMARY_KEYS: {"_sdc_name_hash"},
                 self.REPLICATION_METHOD: self.FULL_TABLE
             },
             "contacts": {
@@ -341,3 +347,8 @@ class IntercomBaseTest(unittest.TestCase):
     ##########################################################################
     ### Tap Specific Methods
     ##########################################################################
+
+    def dt_to_ts(self, dtime, format):
+        """convert datetime with a format to timestamp"""
+        date_stripped = int(time.mktime(dt.strptime(dtime, format).timetuple()))
+        return date_stripped

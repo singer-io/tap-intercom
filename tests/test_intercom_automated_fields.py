@@ -28,13 +28,13 @@ class IntercomAutomaticFields(IntercomBaseTest):
         untestable_streams = {"segments"}
         expected_streams =  self.expected_streams().difference(untestable_streams)
 
-        # instantiate connection
+        # Instantiate connection
         conn_id = connections.ensure_connection(self)
 
-        # run check mode
+        # Run check mode
         found_catalogs = self.run_and_verify_check_mode(conn_id)
 
-        # table and field selection
+        # Table and field selection
         test_catalogs_automatic_fields = [catalog for catalog in found_catalogs
                                           if catalog.get('stream_name') in expected_streams]
 
@@ -42,20 +42,31 @@ class IntercomAutomaticFields(IntercomBaseTest):
             conn_id, test_catalogs_automatic_fields, select_all_fields=False,
         )
 
-        # run initial sync
+        # Run initial sync
         record_count_by_stream = self.run_and_verify_sync(conn_id)
         synced_records = runner.get_records_from_target_output()
 
         for stream in expected_streams:
             with self.subTest(stream=stream):
 
-                # expected values
+                # Expected values
                 expected_keys = self.expected_automatic_fields().get(stream)
+                expected_primary_keys = self.expected_primary_keys()[stream]
 
-                # collect actual values
+                # Collect actual values
                 data = synced_records.get(stream, {})
                 record_messages_keys = [set(row.get('data').keys()) for row in data.get('messages', {})]
 
+                for message in data.get("messages"):
+                    if message.get("action") == "upsert":
+                        primary_keys_list = [
+                            tuple(
+                                message.get("data").get(expected_pk)
+                                for expected_pk in expected_primary_keys
+                            )
+                        ]
+
+                unique_primary_keys_list = set(primary_keys_list)
 
                 # Verify that you get some records for each stream
                 self.assertGreater(
@@ -65,3 +76,10 @@ class IntercomAutomaticFields(IntercomBaseTest):
                 # Verify that only the automatic fields are sent to the target
                 for actual_keys in record_messages_keys:
                     self.assertSetEqual(expected_keys, actual_keys)
+
+                # Verify that all replicated records have unique primary key values.
+                self.assertCountEqual(
+                    primary_keys_list,
+                    unique_primary_keys_list,
+                    msg="Replicated record does not have unique primary key values.",
+                )
