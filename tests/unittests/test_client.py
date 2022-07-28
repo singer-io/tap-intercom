@@ -43,7 +43,7 @@ class TestResponse(unittest.TestCase):
         resp_str = {}
         mocked_400_successful.return_value = get_mock_http_response(400, json.dumps(resp_str))
 
-        expected_message = "HTTP-error-code: 400, Error: General client error, possibly malformed data."
+        expected_message = "400 Client Error: None for url: None"
 
         with self.assertRaises(IntercomError) as e:
             self.intercom_client.check_access_token()
