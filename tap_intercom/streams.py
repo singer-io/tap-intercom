@@ -252,7 +252,7 @@ class Companies(IncrementalStream):
     valid_replication_keys = ['updated_at']
     data_key = 'data'
 
-    def get_records(self, bookmark_datetime=None, is_parent=False, metedata=None) -> Iterator[list]:
+    def get_records(self, bookmark_datetime=None, is_parent=False, metadata=None) -> Iterator[list]:
         scrolling = True
         params = {}
         LOGGER.info("Syncing: {}".format(self.tap_stream_id))
@@ -467,7 +467,7 @@ class ConversationParts(BaseStream):
         return state
 
     # pylint: disable=dangerous-default-value
-    def get_records(self, bookmark_datetime=None, is_parent=False, state={}) -> Iterator[list]:
+    def get_records(self, bookmark_datetime=None, is_parent=False, state={}, metadata=None) -> Iterator[list]:
 
         parent = self.parent(self.client) # Initialize parent object
         # Iterate over conversations
