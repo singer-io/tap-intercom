@@ -38,7 +38,7 @@ class BaseStream:
     def __init__(self, client: IntercomClient):
         self.client = client
 
-    def get_records(self, bookmark_datetime: datetime = None, is_parent: bool = False) -> list:
+    def get_records(self, bookmark_datetime: datetime = None, is_parent: bool = False, metadata=None) -> list:
         """
         Returns a list of records for that stream.
 
@@ -46,6 +46,8 @@ class BaseStream:
             bookmark date
         :param is_parent: If true, may change the type of data
             that is returned for a child stream to consume
+        :param metadata: Stream metadata dict, if required by the child get_records()
+            method.
         :return: list of records
         """
         raise NotImplementedError("Child classes of BaseStream require "
@@ -114,7 +116,7 @@ class IncrementalStream(BaseStream):
         schema_datetimes = find_datetimes_in_schema(stream_schema)
 
         with metrics.record_counter(self.tap_stream_id) as counter:
-            for record in self.get_records(bookmark_datetime):
+            for record in self.get_records(bookmark_datetime, metadata=stream_metadata):
                 transform_times(record, schema_datetimes)
 
                 record_datetime = singer.utils.strptime_to_utc(
@@ -250,7 +252,7 @@ class Companies(IncrementalStream):
     valid_replication_keys = ['updated_at']
     data_key = 'data'
 
-    def get_records(self, bookmark_datetime=None, is_parent=False) -> Iterator[list]:
+    def get_records(self, bookmark_datetime=None, is_parent=False, metedata=None) -> Iterator[list]:
         scrolling = True
         params = {}
         LOGGER.info("Syncing: {}".format(self.tap_stream_id))
@@ -323,7 +325,7 @@ class CompnaySegments(IncrementalStream):
         }
     data_key = 'segments'
 
-    def get_records(self, bookmark_datetime=None, is_parent=False) -> Iterator[list]:
+    def get_records(self, bookmark_datetime=None, is_parent=False, metadata=None) -> Iterator[list]:
         paging = True
         next_page = None
         LOGGER.info("Syncing: {}".format(self.tap_stream_id))
@@ -357,7 +359,7 @@ class Conversations(IncrementalStream):
     data_key = 'conversations'
     per_page = MAX_PAGE_SIZE
 
-    def get_records(self, bookmark_datetime=None, is_parent=False) -> Iterator[list]:
+    def get_records(self, bookmark_datetime=None, is_parent=False, metadata=None) -> Iterator[list]:
         paging = True
         starting_after = None
         search_query = {
@@ -533,9 +535,42 @@ class Contacts(IncrementalStream):
     valid_replication_keys = ['updated_at']
     data_key = 'data'
     per_page = MAX_PAGE_SIZE
+    addressable_list_fields = ['tags', 'notes', 'companies']
 
+    def get_addressable_list(self, contact_list: dict, metadata: dict) -> dict:
+        params = {
+            'display_as': 'plaintext',
+            'per_page': 60 # addressable_list endpoints have a different max page size in Intercom's API v2.0
+        }
 
-    def get_records(self, bookmark_datetime=None, is_parent=False) -> Iterator[list]:
+        for record in contact_list.get(self.data_key):
+            for addressable_list_field in self.addressable_list_fields:
+                # Do not do the API call to get addressable fields if the field is not selected
+                if not metadata.get(('properties', addressable_list_field), {}).get('selected'):
+                    continue
+
+                # List of values from the API
+                values = []
+                data = record.get(addressable_list_field)
+                paging = True
+                next_page = None
+                endpoint = data.get('url')
+
+                while paging:
+                    response = self.client.get(endpoint, url=next_page, params=params)
+
+                    if 'pages' in response and response.get('pages', {}).get('next'):
+                        next_page = response.get('pages', {}).get('next')
+                        endpoint = None
+                    else:
+                        paging = False
+
+                    values.extend(response.get(self.data_key, []))
+                record[addressable_list_field][self.data_key] = values
+
+        return contact_list
+
+    def get_records(self, bookmark_datetime=None, is_parent=False, metadata=None) -> Iterator[list]:
         paging = True
         starting_after = None
         search_query = {
@@ -571,6 +606,9 @@ class Contacts(IncrementalStream):
             else:
                 paging = False
 
+            # Check each contact for any records in each addressable-list object (tags, notes, companies)
+            response = self.get_addressable_list(response, metadata=metadata)
+
             records = transform_json(response, self.tap_stream_id, self.data_key)
             LOGGER.info("Synced: {} for page: {}, records: {}".format(self.tap_stream_id, response.get('pages', {}).get('page'), len(records)))
 
@@ -591,7 +629,7 @@ class Segments(IncrementalStream):
     params = {'include_count': 'true'}
     data_key = 'segments'
 
-    def get_records(self, bookmark_datetime=None, is_parent=False) -> Iterator[list]:
+    def get_records(self, bookmark_datetime=None, is_parent=False, metadata=None) -> Iterator[list]:
         paging = True
         next_page = None
         LOGGER.info("Syncing: {}".format(self.tap_stream_id))
