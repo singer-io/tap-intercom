@@ -1,5 +1,6 @@
 import unittest
-from datetime import datetime
+import singer
+import datetime as dt
 from unittest import mock
 from tap_intercom.client import IntercomClient, IntercomError
 from parameterized import parameterized
@@ -46,17 +47,17 @@ class TestData(unittest.TestCase):
         
         self.assertEqual(parent_data,expected_data)
     
-    # def test_dt_to_epoch(self):
-    #     """
-    #         Verify expected epoch time with UTC datetime 
-    #     """
-    #     date_time_str= "2021-08-12T22:59:57-07:00"
-    #     converted_datetime = datetime.strptime(date_time_str,"%Y-%m-%dT%H:%M:%S-%f:00")
-    #     expected_epoch = 1628789397.07 # expected epoch for `2021-08-12T22:59:57-07:00`
+    def test_dt_to_epoch(self):
+        """
+            Verify expected epoch time with UTC datetime
+        """
+        date_time_str= "2022-07-28T00:00:00.000000Z"
+        converted_datetime = singer.utils.strptime_to_utc(date_time_str)
+        expected_epoch = (dt.datetime(2022,7,28,0,0,0) - dt.datetime(1970,1,1)).total_seconds()
 
-    #     test_epoch = BaseStream.dt_to_epoch_seconds(converted_datetime)
+        test_epoch = BaseStream.dt_to_epoch_seconds(converted_datetime)
 
-    #     self.assertEqual(test_epoch,expected_epoch)
+        self.assertEqual(test_epoch,expected_epoch)
     
     @mock.patch("tap_intercom.client.IntercomClient.get")
     @mock.patch("tap_intercom.streams.LOGGER.critical")
