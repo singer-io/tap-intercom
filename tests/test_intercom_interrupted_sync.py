@@ -40,7 +40,7 @@ class intercomInterruptedSyncTest(IntercomBaseTest):
         - Verify the yet-to-be-synced streams are replicated following the interrupted stream in the resuming sync.
         """
 
-        self.start_date = "2022-07-05T23:37:13Z"
+        self.start_date = "2022-07-05T00:00:00Z"
         start_date_datetime = dt.strptime(self.start_date,"%Y-%m-%dT%H:%M:%SZ")
 
         conn_id = connections.ensure_connection(self, original_properties=False)
@@ -73,7 +73,7 @@ class intercomInterruptedSyncTest(IntercomBaseTest):
                     "currently_syncing": "conversations",
                     "bookmarks": {
                         "company_segments": {
-                             "updated_at": "2022-07-11T13:28:00.000000Z"
+                             "updated_at": "2022-07-19T15:30:19.000000Z"
                             }
                     }
                 }
