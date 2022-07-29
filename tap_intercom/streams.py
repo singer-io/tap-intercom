@@ -467,7 +467,7 @@ class ConversationParts(BaseStream):
         return state
 
     # pylint: disable=dangerous-default-value
-    def get_records(self, bookmark_datetime=None, is_parent=False, state={}, metadata=None) -> Iterator[list]:
+    def get_records(self, bookmark_datetime=None, is_parent=False, metadata=None, state={}) -> Iterator[list]:
 
         parent = self.parent(self.client) # Initialize parent object
         # Iterate over conversations
