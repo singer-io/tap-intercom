@@ -1,4 +1,3 @@
-import logging
 import math as m
 
 from singer.utils import strptime_to_utc
