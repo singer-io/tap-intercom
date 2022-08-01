@@ -1,3 +1,4 @@
+import logging
 import math as m
 
 from singer.utils import strptime_to_utc
@@ -106,7 +107,7 @@ def nested_get(dic, keys):
     for key in keys:
         if isinstance(key, list):
             # Get the date key if it is present in the record.
-            dic = [elem[key[0]] for elem in dic if key[0] in elem]
+            dic = [elem[key[0]] if key[0] in elem else -1 for elem in dic]
         elif dic and key in dic:
             dic = dic[key]
         else:
@@ -123,7 +124,8 @@ def nested_set(dic, keys, value):
         dic[keys[-1]] = value
     else:
         for index, _ in enumerate(dic.get(keys[0])):
-            dic[keys[0]][index][keys[-1][0]] = value[index]
+            if value[index] != -1000:
+                dic[keys[0]][index][keys[-1][0]] = value[index]
 
 # API returns date times, epoch seconds and epoch millis
 # Transform datetimes to epoch millis
