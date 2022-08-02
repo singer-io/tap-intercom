@@ -25,15 +25,12 @@ class IntercomBaseTest(unittest.TestCase):
     PRIMARY_KEYS = "table-key-properties"
     FOREIGN_KEYS = "table-foreign-key-properties"
     REPLICATION_METHOD = "forced-replication-method"
+    OBEYS_START_DATE = "obeys-start-date"
     API_LIMIT = "max-row-limit"
     INCREMENTAL = "INCREMENTAL"
     FULL_TABLE = "FULL_TABLE"
     START_DATE_FORMAT = "%Y-%m-%dT00:00:00Z"
     RECORD_REPLICATION_KEY_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
-    DATETIME_FMT = {
-        "%Y-%m-%dT%H:%M:%SZ",
-        "%Y-%m-%dT%H:%M:%S.000000Z"
-    }
     BOOKMARK_COMPARISON_FORMAT = "%Y-%m-%dT00:00:00+00:00"
     LOGGER = get_logger()
     DAYS = 20
@@ -71,52 +68,63 @@ class IntercomBaseTest(unittest.TestCase):
             "admins": {
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.FULL_TABLE,
+                self.OBEYS_START_DATE : False
             },
             "companies": {
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"updated_at"}
+                self.REPLICATION_KEYS: {"updated_at"},
+                self.OBEYS_START_DATE : True
             },
             "company_attributes": {
                 self.PRIMARY_KEYS: {"name"},
-                self.REPLICATION_METHOD: self.FULL_TABLE
+                self.REPLICATION_METHOD: self.FULL_TABLE,
+                self.OBEYS_START_DATE : False
             },
             "company_segments": {
                 self.PRIMARY_KEYS: {"id", },
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"updated_at"}
+                self.REPLICATION_KEYS: {"updated_at"},
+                self.OBEYS_START_DATE : True
             },
             "conversations": {
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"updated_at"}
+                self.REPLICATION_KEYS: {"updated_at"},
+                self.OBEYS_START_DATE : True
             },
             "conversation_parts": {
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"updated_at"}
+                self.REPLICATION_KEYS: {"updated_at"},
+                self.OBEYS_START_DATE : True
             },
             "contact_attributes": {
                 self.PRIMARY_KEYS: {"name"},
-                self.REPLICATION_METHOD: self.FULL_TABLE
+                self.REPLICATION_METHOD: self.FULL_TABLE,
+                self.OBEYS_START_DATE : False
             },
             "contacts": {
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"updated_at"}
+                self.REPLICATION_KEYS: {"updated_at"},
+                self.OBEYS_START_DATE : True
             },
             "segments": {
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"updated_at"}
+                self.REPLICATION_KEYS: {"updated_at"},
+                self.OBEYS_START_DATE : True
             },
             "tags": {
                 self.PRIMARY_KEYS: {'id'},
-                self.REPLICATION_METHOD: self.FULL_TABLE
+                self.REPLICATION_METHOD: self.FULL_TABLE,
+                self.OBEYS_START_DATE : False
             },
             "teams": {
                 self.PRIMARY_KEYS: {'id'},
-                self.REPLICATION_METHOD: self.FULL_TABLE
+                self.REPLICATION_METHOD: self.FULL_TABLE,
+                self.OBEYS_START_DATE : False
             }
         }
 

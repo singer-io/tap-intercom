@@ -92,7 +92,7 @@ class IntercomStartDateTest(IntercomBaseTest):
                 primary_keys_sync_2 = set(primary_keys_list_2)
 
 
-                if expected_metadata[self.REPLICATION_METHOD] == self.INCREMENTAL:
+                if expected_metadata[self.OBEYS_START_DATE]:
 
                     bookmark_keys_list_1 = [message.get('data').get(next(iter(expected_replication_keys))) for message in synced_records_1.get(stream).get('messages')
                                         if message.get('action') == 'upsert']
