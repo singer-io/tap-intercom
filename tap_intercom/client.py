@@ -195,7 +195,7 @@ def raise_for_error(response):
         else:
             err_msg = errors[0].get('message')
             intercom_error_code = errors[0].get('code')
-            message = "HTTP-error-code: {}, Error:{}".format(status_code,err_msg)
+            message = "HTTP-error-code: {}, Error:{}, Error_Code:{}".format(status_code,err_msg,intercom_error_code)
     else:
         # Prepare custom default error message
         message = "HTTP-error-code: {}, Error: {}".format(status_code,
