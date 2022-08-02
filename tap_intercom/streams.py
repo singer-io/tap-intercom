@@ -556,6 +556,10 @@ class Contacts(IncrementalStream):
                 next_page = None
                 endpoint = data.get('url')
 
+                # Do not do the API call if we have 0 records
+                if not data.get('total_count') > 0:
+                    continue
+
                 while paging:
                     response = self.client.get(endpoint, url=next_page, params=params)
 

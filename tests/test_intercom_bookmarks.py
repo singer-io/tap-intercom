@@ -68,7 +68,10 @@ class IntercomBookmarks(IntercomBaseTest):
         # Created card for untestable/unstable streams.
         # FIX CARD: https://jira.talendforge.org/browse/TDL-17035
         untestable_streams = {"companies", "segments", "company_segments", "conversation_parts", "conversations"}
-        expected_streams =  self.expected_streams().difference(untestable_streams)
+        # Contacts stream does 3 API calls for addressable list fields, [notes, companies, tags]
+        # This cause the build to run more than 3 hrs, thus skipping this stream
+        stream_to_skip = {"contacts"}
+        expected_streams =  self.expected_streams() - untestable_streams - stream_to_skip
     
         expected_replication_keys = self.expected_replication_keys()
         expected_replication_methods = self.expected_replication_method()
