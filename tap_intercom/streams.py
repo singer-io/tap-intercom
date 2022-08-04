@@ -143,12 +143,12 @@ class IncrementalStream(BaseStream):
         :return: State data in the form of a dictionary
         """
 
-        # check if the current stream has child stream or not
+        # Check if the current stream has child stream or not
         has_child = self.child is not None
-        # child stream class
+        # Child stream class
         child_stream = STREAMS.get(self.child)
 
-        # get current stream bookmark
+        # Get current stream bookmark
         parent_bookmark = singer.get_bookmark(state, self.tap_stream_id, self.replication_key, config['start_date'])
         sync_start_date = singer.utils.strptime_to_utc(parent_bookmark)
 
@@ -156,7 +156,7 @@ class IncrementalStream(BaseStream):
         is_child_selected = False
 
         # If the current stream has a child stream, then get the child stream's bookmark
-        # and update the sync start date to minimum of parent bookmark or child bookmark
+        # And update the sync start date to minimum of parent bookmark or child bookmark
         if has_child:
             child_bookmark = singer.get_bookmark(state, child_stream.tap_stream_id, self.replication_key, config['start_date'])
 
@@ -172,7 +172,7 @@ class IncrementalStream(BaseStream):
             else:
                 return state
 
-            # create child stream object and generate schema
+            # Create child stream object and generate schema
             child_stream_obj = child_stream(self.client, self.catalog, self.selected_streams)
             child_stream_ = self.catalog.get_stream(child_stream.tap_stream_id)
             child_schema = child_stream_.schema.to_dict()
@@ -200,7 +200,7 @@ class IncrementalStream(BaseStream):
                         record[self.replication_key])
                     )
 
-                # write record if the parent is selected
+                # Write the record if the parent is selected
                 if is_parent_selected and record_datetime >= sync_start_date:
                     transformed_record = transform(record,
                                                     stream_schema,
