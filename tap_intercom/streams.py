@@ -34,6 +34,7 @@ class BaseStream:
     params = {}
     parent = None
     data_key = None
+    child = None
 
     def __init__(self, client: IntercomClient, catalog, selected_streams):
         self.client = client
@@ -143,9 +144,9 @@ class IncrementalStream(BaseStream):
         """
 
         # check if the current stream has child stream or not
-        has_child = self.tap_stream_id in CHILD_STREAMS
+        has_child = self.child is not None
         # child stream class
-        child_stream = STREAMS.get(CHILD_STREAMS.get(self.tap_stream_id))
+        child_stream = STREAMS.get(self.child)
 
         # get current stream bookmark
         parent_bookmark = singer.get_bookmark(state, self.tap_stream_id, self.replication_key, config['start_date'])
@@ -439,6 +440,7 @@ class Conversations(IncrementalStream):
     params = {'display_as': 'plaintext'}
     data_key = 'conversations'
     per_page = MAX_PAGE_SIZE
+    child = 'conversation_parts'
 
     def get_records(self, bookmark_datetime=None, is_parent=False) -> Iterator[list]:
         paging = True
@@ -696,9 +698,4 @@ STREAMS = {
     "segments": Segments,
     "tags": Tags,
     "teams": Teams
-}
-
-CHILD_STREAMS = {
-    # parent stream: child stream
-    "conversations": "conversation_parts"
 }
