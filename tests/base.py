@@ -8,7 +8,6 @@ import os
 from datetime import timedelta
 from datetime import datetime as dt
 
-from singer import get_logger
 from tap_tester import connections, menagerie, runner, LOGGER
 
 
