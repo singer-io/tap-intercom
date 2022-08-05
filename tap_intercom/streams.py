@@ -54,18 +54,6 @@ class BaseStream:
         raise NotImplementedError("Child classes of BaseStream require "
                                   "`get_records` implementation")
 
-    def get_parent_data(self, bookmark_datetime: datetime = None) -> list:
-        """
-        Returns a list of records from the parent stream.
-
-        :param bookmark_datetime: The datetime object representing the
-            bookmark date
-        :return: A list of records
-        """
-        # pylint: disable=not-callable
-        parent = self.parent(self.client, self.catalog, self.selected_streams)
-        return parent.get_records(bookmark_datetime, is_parent=True)
-
     @staticmethod
     def epoch_milliseconds_to_dt_str(timestamp: float) -> str:
         # Convert epoch milliseconds to datetime object in UTC format
@@ -307,6 +295,18 @@ class Admins(FullTableStream):
     key_properties = ['id']
     path = 'admins/{}'
     parent = AdminList
+
+    def get_parent_data(self, bookmark_datetime: datetime = None) -> list:
+        """
+        Returns a list of records from the parent stream.
+
+        :param bookmark_datetime: The datetime object representing the
+            bookmark date
+        :return: A list of records
+        """
+        # pylint: disable=not-callable
+        parent = self.parent(self.client, self.catalog, self.selected_streams)
+        return parent.get_records(bookmark_datetime, is_parent=True)
 
     def get_records(self, bookmark_datetime=None, is_parent=False) -> Iterator[list]:
         LOGGER.info("Syncing: {}".format(self.tap_stream_id))
