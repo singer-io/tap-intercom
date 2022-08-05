@@ -31,7 +31,6 @@ class IntercomBaseTest(unittest.TestCase):
     START_DATE_FORMAT = "%Y-%m-%dT00:00:00Z"
     RECORD_REPLICATION_KEY_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
     BOOKMARK_COMPARISON_FORMAT = "%Y-%m-%dT00:00:00+00:00"
-    LOGGER = get_logger()
     DAYS = 20
     start_date= (dt.now()-timedelta(days=DAYS)).strftime(START_DATE_FORMAT)
 
