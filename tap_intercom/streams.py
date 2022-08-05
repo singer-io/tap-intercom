@@ -85,6 +85,7 @@ class IncrementalStream(BaseStream):
     :param client: The API client used extract records from the external source
     """
     replication_method = 'INCREMENTAL'
+    to_write_intermediate_bookmark = False
 
     # Disabled `unused-argument` as it causing pylint error.
     # Method which call this `sync` method is passing unused argument.So, removing argument would not work.
@@ -112,6 +113,8 @@ class IncrementalStream(BaseStream):
         LOGGER.info("Stream: {}, initial max_bookmark_value: {}".format(self.tap_stream_id, start_date))
         bookmark_datetime = singer.utils.strptime_to_utc(start_date)
         max_datetime = bookmark_datetime
+        # We are not using singer's record counter as the counter reset after 60 seconds
+        record_counter = 0
 
         schema_datetimes = find_datetimes_in_schema(stream_schema)
 
@@ -125,6 +128,7 @@ class IncrementalStream(BaseStream):
                     )
 
                 if record_datetime >= bookmark_datetime:
+                    record_counter += 1
                     transformed_record = transform(record,
                                                     stream_schema,
                                                     integer_datetime_fmt=UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING,
@@ -133,6 +137,17 @@ class IncrementalStream(BaseStream):
                     singer.write_record(self.tap_stream_id, transformed_record, time_extracted=singer.utils.now())
                     counter.increment()
                     max_datetime = max(record_datetime, max_datetime)
+
+                if self.to_write_intermediate_bookmark and record_counter == MAX_PAGE_SIZE:
+                    # Write bookmark and state after every page of records
+                    state = singer.write_bookmark(state,
+                                      self.tap_stream_id,
+                                      self.replication_key,
+                                      singer.utils.strftime(max_datetime))
+                    singer.write_state(state)
+                    # Reset counter
+                    record_counter = 0
+
             bookmark_date = singer.utils.strftime(max_datetime)
             LOGGER.info("FINISHED Syncing: {}, total_records: {}.".format(self.tap_stream_id, counter.value))
 
@@ -535,7 +550,9 @@ class Contacts(IncrementalStream):
     valid_replication_keys = ['updated_at']
     data_key = 'data'
     per_page = MAX_PAGE_SIZE
-    addressable_list_fields = ['tags', 'notes', 'companies']
+    # addressable_list_fields = ['tags', 'notes', 'companies']
+    addressable_list_fields = ['tags', 'companies']
+    to_write_intermediate_bookmark = True
 
     def get_addressable_list(self, contact_list: dict, metadata: dict) -> dict:
         params = {
@@ -546,8 +563,8 @@ class Contacts(IncrementalStream):
         for record in contact_list.get(self.data_key):
             for addressable_list_field in self.addressable_list_fields:
                 # Do not do the API call to get addressable fields if the field is not selected
-                if not metadata.get(('properties', addressable_list_field), {}).get('selected'):
-                    continue
+                # if not metadata.get(('properties', addressable_list_field), {}).get('selected'):
+                #     continue
 
                 # List of values from the API
                 values = []
@@ -558,6 +575,10 @@ class Contacts(IncrementalStream):
 
                 # Do not do the API call if we have 0 records
                 if not data.get('total_count') > 0:
+                    continue
+
+                # Do not do the API call if we have greater than 10 records ie. 'has_more' field is 'False'
+                if not data.get('has_more'):
                     continue
 
                 while paging:
