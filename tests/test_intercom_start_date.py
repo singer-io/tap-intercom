@@ -1,4 +1,4 @@
-from tap_tester import connections, runner
+from tap_tester import connections, runner, LOGGER
 from base import IntercomBaseTest
 
 
@@ -49,7 +49,7 @@ class IntercomStartDateTest(IntercomBaseTest):
         ### Update START DATE Between Syncs
         ##########################################################################
 
-        print("REPLICATION START DATE CHANGE: {} ===>>> {} ".format(self.start_date, self.start_date_2))
+        LOGGER.info("REPLICATION START DATE CHANGE: {} ===>>> {} ".format(self.start_date, self.start_date_2))
         self.start_date = self.start_date_2
 
         ##########################################################################
