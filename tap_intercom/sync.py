@@ -53,7 +53,8 @@ def get_streams_to_sync(catalog, selected_streams, selected_stream_names):
             streams_to_sync.append(stream)
         # If the stream is child stream, then add parent stream to sync
         elif stream_obj.parent:
-            # For Admins, the AdminList is parent stream but it is not written in the catalog
+            # The AdminList and Admin are parent-child streams, the admin is written in the catalog but the admin_list is not.
+            # The purpose of admin_list is to return a list of admins through which individual admins will be synced.
             if stream_obj == Admins:
                 streams_to_sync.append(catalog.get_stream(stream_obj.tap_stream_id))
             elif stream_obj.parent.tap_stream_id not in selected_stream_names:
