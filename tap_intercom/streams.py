@@ -563,8 +563,8 @@ class Contacts(IncrementalStream):
         for record in contact_list.get(self.data_key):
             for addressable_list_field in self.addressable_list_fields:
                 # Do not do the API call to get addressable fields if the field is not selected
-                # if not metadata.get(('properties', addressable_list_field), {}).get('selected'):
-                #     continue
+                if not metadata.get(('properties', addressable_list_field), {}).get('selected'):
+                    continue
 
                 # List of values from the API
                 values = []
