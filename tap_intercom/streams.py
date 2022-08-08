@@ -562,10 +562,6 @@ class Contacts(IncrementalStream):
 
         for record in contact_list.get(self.data_key):
             for addressable_list_field in self.addressable_list_fields:
-                # Do not do the API call to get addressable fields if the field is not selected
-                if not metadata.get(('properties', addressable_list_field), {}).get('selected'):
-                    continue
-
                 # List of values from the API
                 values = []
                 data = record.get(addressable_list_field)
@@ -573,12 +569,13 @@ class Contacts(IncrementalStream):
                 next_page = None
                 endpoint = data.get('url')
 
-                # Do not do the API call if we have 0 records
-                if not data.get('total_count') > 0:
-                    continue
-
-                # Do not do the API call if we have greater than 10 records ie. 'has_more' field is 'False'
-                if not data.get('has_more'):
+                # Do not do the API call to get addressable fields:
+                #   If the field is not selected
+                #   If we have 0 records
+                #   If we have less than 10 records ie. the 'has_more' field is 'False'
+                if not metadata.get(('properties', addressable_list_field), {}).get('selected') or \
+                    not data.get('total_count') > 0 or \
+                        not data.get('has_more'):
                     continue
 
                 while paging:
