@@ -21,7 +21,7 @@ class IntercomAllFields(IntercomBaseTest):
             'segments'
         },
         'conversations': {
-            'user'
+            'user',
             'customer_first_reply',
             'sent_at',
             'assignee',
