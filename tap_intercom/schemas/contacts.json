@@ -356,56 +356,22 @@
     "notes": {
       "type": [
         "null",
-        "array"
+        "object"
       ],
-      "items": {
-        "type": [
-          "null",
-          "object"
-        ],
-        "additionalProperties": false,
-        "properties": {
-          "type": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "id": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "created_at": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "date-time"
-          },
-          "contact": {
-            "type": [
-              "null",
-              "object"
-            ],
-            "additionalProperties": false,
-            "properties": {
-              "type": {
-                "type": [
-                  "null",
-                  "string"
-                ]
-              },
-              "id": {
-                "type": [
-                  "null",
-                  "string"
-                ]
-              }
-            }
-          },
-          "author": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "data": {
+          "type": [
+            "null",
+            "array"
+          ],
+          "items": {
             "type": [
               "null",
               "object"
@@ -424,38 +390,32 @@
                   "string"
                 ]
               },
-              "name": {
+              "url": {
                 "type": [
                   "null",
                   "string"
-                ]
-              },
-              "email": {
-                "type": [
-                  "null",
-                  "string"
-                ]
-              },
-              "away_mode_enabled": {
-                "type": [
-                  "null",
-                  "boolean"
-                ]
-              },
-              "away_mode_reassign": {
-                "type": [
-                  "null",
-                  "boolean"
                 ]
               }
             }
-          },
-          "body": {
-            "type": [
-              "null",
-              "string"
-            ]
           }
+        },
+        "url": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "total_count": {
+          "type": [
+            "null",
+            "integer"
+          ]
+        },
+        "has_more": {
+          "type": [
+            "null",
+            "boolean"
+          ]
         }
       }
     },
