@@ -45,7 +45,7 @@ class intercomInterruptedSyncTest(IntercomBaseTest):
 
         conn_id = connections.ensure_connection(self, original_properties=False)
 
-        expected_streams = {"company_segments","conversations","segments"}
+        expected_streams = {"company_segments","conversations","segments","admins"}
 
         # Run check mode
         found_catalogs = self.run_and_verify_check_mode(conn_id)
@@ -70,13 +70,16 @@ class intercomInterruptedSyncTest(IntercomBaseTest):
 
         # State for 2nd sync
         state = {
-                    "currently_syncing": "conversations",
-                    "bookmarks": {
-                        "company_segments": {
-                             "updated_at": "2022-07-19T15:30:19.000000Z"
-                            }
-                    }
+            "currently_syncing": "conversations",
+            "bookmarks": {
+                "conversations": {
+                    "updated_at": "2022-07-07T15:15:47.000000Z"
+                },
+                "company_segments": {
+                    "updated_at": "2022-07-19T15:30:19.000000Z"
                 }
+            }
+        }
             
         # Set state for 2nd sync
         menagerie.set_state(conn_id, state)
@@ -87,42 +90,49 @@ class intercomInterruptedSyncTest(IntercomBaseTest):
         final_state = menagerie.get_state(conn_id)
         currently_syncing = final_state.get('currently_syncing')
 
+        expected_replication_method = self.expected_replication_method()
+
         # Checking resuming sync resulted in a successfull saved state
         for stream in expected_streams:
             with self.subTest(stream=stream ):
-                expected_replication_key = next(iter(self.expected_replication_keys()[stream]))
                 # Verify sync is not interrupted by checking currently_syncing in the state for sync
                 self.assertIsNone(currently_syncing)
 
                 # Verify bookmarks are saved
                 self.assertIsNotNone(final_state.get('bookmarks'))
 
-                # Verify final_state is greater than or equal to uninterrupted sync's state.
-                # (This is what the value would have been without an interruption and proves resuming succeeds)
-                # As live data is received and bookmark is getting updated in between the sync, therefore asserting greater than or equal.
-                for bookmark_full_sync,bookmark_final_state in final_state.get('bookmarks').items():
-                    self.assertGreaterEqual(bookmark_final_state.get(expected_replication_key),full_sync_state.get('bookmarks')[bookmark_full_sync].get(expected_replication_key))
+                if expected_replication_method[stream] == self.INCREMENTAL:
+                    expected_replication_key = next(iter(self.expected_replication_keys()[stream]))
+
+                    # Verify final_state is greater than or equal to uninterrupted sync's state.
+                    # (This is what the value would have been without an interruption and proves resuming succeeds)
+                    # As live data is received and bookmark is getting updated in between the sync, therefore asserting greater than or equal.
+                    for bookmark_full_sync,bookmark_final_state in final_state.get('bookmarks').items():
+                        self.assertGreaterEqual(bookmark_final_state.get(expected_replication_key),full_sync_state.get('bookmarks')[bookmark_full_sync].get(expected_replication_key))
+                else:
+                    # Verify we do not store any state for FULL_TABLE streams
+                    self.assertIsNone(full_sync_state.get('bookmarks').get(stream))
+                    self.assertIsNone(final_state.get('bookmarks').get(stream))
 
         # Stream level assertions
         for stream in expected_streams:
             with self.subTest(stream=stream):
-                
-                # Gather Expectations
-                expected_replication_method = self.expected_replication_method()[stream]
-                expected_replication_key = next(iter(self.expected_replication_keys()[stream]))
                 
                 # Gather Actual results
                 full_records = [message['data'] for message in synced_records_full_sync.get(stream, {}).get('messages', [])]
                 full_record_count = record_count_by_stream_full_sync.get(stream, 0)
                 interrupted_records = [message['data'] for message in synced_records_interrupted_sync.get(stream, {}).get('messages', [])]
                 interrupted_record_count = record_count_by_stream_interrupted_sync.get(stream, 0)
-                
-                # Final bookmark after interrupted sync
-                final_stream_bookmark = final_state['bookmarks'][stream].get("updated_at")
-                final_state_bookmark_datetime = dt.strptime(final_stream_bookmark, "%Y-%m-%dT%H:%M:%S.%fZ")
-                full_sync_bookmark = full_sync_state['bookmarks'][stream].get("updated_at")
-                full_sync_bookmark_datetime = dt.strptime(full_sync_bookmark, "%Y-%m-%dT%H:%M:%S.%fZ")
+
                 if expected_replication_method == self.INCREMENTAL:
+
+                    # Gather Expectations
+                    expected_replication_key = next(iter(self.expected_replication_keys()[stream]))
+                    # Final bookmark after interrupted sync
+                    final_stream_bookmark = final_state['bookmarks'][stream].get("updated_at")
+                    final_state_bookmark_datetime = dt.strptime(final_stream_bookmark, "%Y-%m-%dT%H:%M:%S.%fZ")
+                    full_sync_bookmark = full_sync_state['bookmarks'][stream].get("updated_at")
+                    full_sync_bookmark_datetime = dt.strptime(full_sync_bookmark, "%Y-%m-%dT%H:%M:%S.%fZ")
                     
                     # Verify final bookmark saved matches formatting standards for resuming sync
                     self.assertIsNotNone(final_stream_bookmark)
@@ -133,12 +143,8 @@ class intercomInterruptedSyncTest(IntercomBaseTest):
                     if stream == state['currently_syncing']:
                        
                         # Check if the interrupted stream has a bookmark written for it
-                        if state["bookmarks"].get(stream,{}).get("updated_at",None):        
-                            interrupted_stream_bookmark = state['bookmarks'][stream].get("updated_at")
-                            interrupted_bookmark_datetime = dt.strptime(interrupted_stream_bookmark, "%Y-%m-%dT%H:%M:%S.%fZ")
-                        else:
-                            # Assign the start date to the interrupted stream 
-                            interrupted_bookmark_datetime = start_date_datetime
+                        interrupted_stream_bookmark = state['bookmarks'][stream].get("updated_at")
+                        interrupted_bookmark_datetime = dt.strptime(interrupted_stream_bookmark, "%Y-%m-%dT%H:%M:%S.%fZ")
 
                         # - Verify resuming sync only replicates records with replication key values greater or equal to
                         #       the state for streams that were replicated during the interrupted sync.

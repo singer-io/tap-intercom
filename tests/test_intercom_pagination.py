@@ -2,6 +2,7 @@
 Test tap pagination of streams
 """
 
+from math import ceil
 from tap_tester import runner, connections
 
 from base import IntercomBaseTest
@@ -19,9 +20,12 @@ class RechargePaginationTest(IntercomBaseTest):
         # Checking pagination for streams having enough data
         expected_streams = [
             "conversations",
-            "contacts",
-            "tags"
-            ]
+            # The Contacts stream API has a delay in updating the records. Thus, we are getting some duplicate records.
+            # Reference Ticket: https://jira.talendforge.org/browse/TDL-19860
+            # "contacts",
+            "tags",
+            "companies"
+        ]
         found_catalogs = self.run_and_verify_check_mode(conn_id)
 
         # Table and field selection
@@ -49,12 +53,21 @@ class RechargePaginationTest(IntercomBaseTest):
                 # Verify records are more than page size so multiple pages is working
                 self.assertGreater(record_count_sync, page_size)
 
-                primary_keys_list_1 = primary_keys_list[:page_size]
-                primary_keys_list_2 = primary_keys_list[page_size:2*page_size]
+                # Chunk the replicated records (just primary keys) into expected pages
+                pages = []
+                page_count = ceil(len(primary_keys_list) / page_size)
+                for page_index in range(page_count):
+                    page_start = page_index * page_size
+                    page_end = (page_index + 1) * page_size
+                    pages.append(set(primary_keys_list[page_start:page_end]))
 
-                primary_keys_page_1 = set(primary_keys_list_1)
-                primary_keys_page_2 = set(primary_keys_list_2)
+                # Verify by primary keys that data is unique for each page
+                for current_index, current_page in enumerate(pages):
+                    with self.subTest(current_page_primary_keys=current_page):
 
-                # Verify by private keys that data is unique for page
-                self.assertEqual(len(primary_keys_page_1), page_size)
-                self.assertTrue(primary_keys_page_1.isdisjoint(primary_keys_page_2))  # verify there are no duplicates between pages
+                        for other_index, other_page in enumerate(pages):
+                            # don't compare the page to itself
+                            if current_index == other_index:
+                                continue
+
+                            self.assertTrue(current_page.isdisjoint(other_page), msg=f'other_page_primary_keys={other_page}')
