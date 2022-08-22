@@ -51,7 +51,7 @@ class TestParentChildSync(unittest.TestCase):
             Test case to verify we set expected start date to sync for parent-child streams
         """
         client = IntercomClient('test_access_token', 300)
-        conversations = Conversations(client=client, catalog=Catalog(test_data[0]), test_data[0])
+        conversations = Conversations(client=client, catalog=Catalog(test_data[0]), selected_streams=test_data[0])
         state = test_data[1]
         config = {'start_date': '2021-01-01'}
         conversations.sync(state=state, stream_schema={}, stream_metadata={}, config=config, transformer=None)
@@ -71,7 +71,7 @@ class TestParentChildWriteRecords(unittest.TestCase):
             Test case to verify we write parent records if the stream is selected
         """
         client = IntercomClient('test_access_token', 300)
-        conversations = Conversations(client=client, catalog=Catalog(['conversations']), ['conversations'])
+        conversations = Conversations(client=client, catalog=Catalog(['conversations']), selected_streams=['conversations'])
         config = {'start_date': '2021-01-01'}
         conversations.sync(state={}, stream_schema={}, stream_metadata={}, config=config, transformer=None)
         self.assertEqual(mocked_transform.call_count, 1)
@@ -81,7 +81,7 @@ class TestParentChildWriteRecords(unittest.TestCase):
             Test case to verify we write child records if the stream is selected
         """
         client = IntercomClient('test_access_token', 300)
-        conversations = Conversations(client=client, catalog=Catalog(['conversation_parts']), ['conversation_parts'])
+        conversations = Conversations(client=client, catalog=Catalog(['conversation_parts']), selected_streams=['conversation_parts'])
         config = {'start_date': '2021-01-01'}
         conversations.sync(state={}, stream_schema={}, stream_metadata={}, config=config, transformer=None)
         self.assertEqual(mocked_sync_substream.call_count, 1)
@@ -91,7 +91,7 @@ class TestParentChildWriteRecords(unittest.TestCase):
             Test case to verify we write parent and child records if both streams are selected
         """
         client = IntercomClient('test_access_token', 300)
-        conversations = Conversations(client=client, catalog=Catalog(['conversations', 'conversation_parts']), ['conversations', 'conversation_parts'])
+        conversations = Conversations(client=client, catalog=Catalog(['conversations', 'conversation_parts']), selected_streams=['conversations', 'conversation_parts'])
         config = {'start_date': '2021-01-01'}
         conversations.sync(state={}, stream_schema={}, stream_metadata={}, config=config, transformer=None)
         self.assertEqual(mocked_transform.call_count, 1)
@@ -102,7 +102,7 @@ class TestParentChildWriteRecords(unittest.TestCase):
             Test case to verify does not write any records when parent and child both streams are not selected
         """
         client = IntercomClient('test_access_token', 300)
-        conversations = Conversations(client=client, catalog=Catalog(['test']), ['test'])
+        conversations = Conversations(client=client, catalog=Catalog(['test']), selected_streams=['test'])
         config = {'start_date': '2021-01-01'}
         state = conversations.sync(state={}, stream_schema={}, stream_metadata={}, config=config, transformer=None)
         self.assertEqual(state, {})
