@@ -70,8 +70,8 @@ class IntercomBookmarks(IntercomBaseTest):
         untestable_streams = {"companies", "company_segments", "conversation_parts", "conversations"}
         # Contacts stream does 3 API calls for addressable list fields, [notes, companies, tags]
         # This cause the build to run more than 3 hrs, thus skipping this stream
-        stream_to_skip = {"contacts"}
-        expected_streams =  self.expected_streams() - untestable_streams - stream_to_skip
+        streams_to_skip = {"contacts"}
+        expected_streams =  self.expected_streams() - untestable_streams - streams_to_skip
     
         expected_replication_keys = self.expected_replication_keys()
         expected_replication_methods = self.expected_replication_method()
