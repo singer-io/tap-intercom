@@ -51,10 +51,10 @@ class TestParentChildSync(unittest.TestCase):
             Test case to verify we set expected start date to sync for parent-child streams
         """
         client = IntercomClient('test_access_token', 300)
-        conversations = Conversations(client, Catalog(test_data[0]), test_data[0])
+        conversations = Conversations(client=client, catalog=Catalog(test_data[0]), test_data[0])
         state = test_data[1]
         config = {'start_date': '2021-01-01'}
-        conversations.sync(state, {}, {}, config, None)
+        conversations.sync(state=state, stream_schema={}, stream_metadata={}, config=config, transformer=None)
         mocked_get_records.assert_called_with(singer.utils.strptime_to_utc(expected_data))
 
 @mock.patch('singer.write_schema')
@@ -71,9 +71,9 @@ class TestParentChildWriteRecords(unittest.TestCase):
             Test case to verify we write parent records if the stream is selected
         """
         client = IntercomClient('test_access_token', 300)
-        conversations = Conversations(client, Catalog(['conversations']), ['conversations'])
+        conversations = Conversations(client=client, catalog=Catalog(['conversations']), ['conversations'])
         config = {'start_date': '2021-01-01'}
-        conversations.sync({}, {}, {}, config, None)
+        conversations.sync(state={}, stream_schema={}, stream_metadata={}, config=config, transformer=None)
         self.assertEqual(mocked_transform.call_count, 1)
 
     def test_child_stream_records_writing(self, mocked_sync_substream, mocked_transform, mocked_get_records, mocked_write_schema):
@@ -81,9 +81,9 @@ class TestParentChildWriteRecords(unittest.TestCase):
             Test case to verify we write child records if the stream is selected
         """
         client = IntercomClient('test_access_token', 300)
-        conversations = Conversations(client, Catalog(['conversation_parts']), ['conversation_parts'])
+        conversations = Conversations(client=client, catalog=Catalog(['conversation_parts']), ['conversation_parts'])
         config = {'start_date': '2021-01-01'}
-        conversations.sync({}, {}, {}, config, None)
+        conversations.sync(state={}, stream_schema={}, stream_metadata={}, config=config, transformer=None)
         self.assertEqual(mocked_sync_substream.call_count, 1)
 
     def test_parent_and_child_stream_records_writing(self, mocked_sync_substream, mocked_transform, mocked_get_records, mocked_write_schema):
@@ -91,9 +91,9 @@ class TestParentChildWriteRecords(unittest.TestCase):
             Test case to verify we write parent and child records if both streams are selected
         """
         client = IntercomClient('test_access_token', 300)
-        conversations = Conversations(client, Catalog(['conversations', 'conversation_parts']), ['conversations', 'conversation_parts'])
+        conversations = Conversations(client=client, catalog=Catalog(['conversations', 'conversation_parts']), ['conversations', 'conversation_parts'])
         config = {'start_date': '2021-01-01'}
-        conversations.sync({}, {}, {}, config, None)
+        conversations.sync(state={}, stream_schema={}, stream_metadata={}, config=config, transformer=None)
         self.assertEqual(mocked_transform.call_count, 1)
         self.assertEqual(mocked_sync_substream.call_count, 1)
 
@@ -102,9 +102,9 @@ class TestParentChildWriteRecords(unittest.TestCase):
             Test case to verify does not write any records when parent and child both streams are not selected
         """
         client = IntercomClient('test_access_token', 300)
-        conversations = Conversations(client, Catalog(['test']), ['test'])
+        conversations = Conversations(client=client, catalog=Catalog(['test']), ['test'])
         config = {'start_date': '2021-01-01'}
-        state = conversations.sync({}, {}, {}, config, None)
+        state = conversations.sync(state={}, stream_schema={}, stream_metadata={}, config=config, transformer=None)
         self.assertEqual(state, {})
         self.assertEqual(mocked_transform.call_count, 0)
         self.assertEqual(mocked_sync_substream.call_count, 0)

@@ -49,7 +49,7 @@ class TestConversationPartsBookmarking(unittest.TestCase):
 
         # Initialize IntercomClient and Conversations object
         client = IntercomClient('dummy_token', None)
-        conversation_part = Conversations(client, Catalog(['conversations', 'conversation_parts']), ['conversations', 'conversation_parts'])
+        conversation_part = Conversations(client=client, catalog=Catalog(['conversations', 'conversation_parts']), ['conversations', 'conversation_parts'])
 
         tap_state = {}
         # Call get_records() of conversation_parts which writes bookmark
