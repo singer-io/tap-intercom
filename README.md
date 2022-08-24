@@ -45,7 +45,7 @@ This tap:
 [company_attributes](https://developers.intercom.com/intercom-api-reference/reference#list-company-data-attributes)
 reference#list-customer-data-attributes)
 - Endpoint: https://api.intercom.io/data_attributes/company
-- Primary key fields: name
+- Primary key fields: _sdc_record_hash ie. the hash of [id, name, description]
 - Foreign key fields: none
 - Replication strategy: FULL_TABLE
 - Transformations: none
@@ -76,7 +76,7 @@ reference#list-customer-data-attributes)
 
 [customer_attributes](https://developers.intercom.com/intercom-api-reference/reference#list-customer-data-attributes)
 - Endpoint: https://api.intercom.io/data_attributes/customer
-- Primary key fields: name
+- Primary key fields: _sdc_record_hash ie. the hash of [id, name, description]
 - Foreign key fields: none
 - Replication strategy: FULL_TABLE
 - Transformations: none
