@@ -42,7 +42,7 @@ def translate_state(state):
 
 def get_streams_to_sync(catalog, selected_streams, selected_stream_names):
     """
-        Get streams to sync ie. selected streams and parent stream if child stream stream or parent stream is selected
+        Get streams to sync ie. selected streams and parent stream if child stream or parent stream is selected
     """
     streams_to_sync = []
 

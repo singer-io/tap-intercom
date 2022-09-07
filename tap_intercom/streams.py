@@ -157,8 +157,6 @@ class IncrementalStream(BaseStream):
                 sync_start_date = singer.utils.strptime_to_utc(parent_bookmark)
             elif is_child_selected:
                 sync_start_date = singer.utils.strptime_to_utc(child_bookmark)
-            else:
-                return state
 
             # Create child stream object and generate schema
             child_stream_obj = child_stream(self.client, self.catalog, self.selected_streams)

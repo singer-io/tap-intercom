@@ -96,15 +96,3 @@ class TestParentChildWriteRecords(unittest.TestCase):
         conversations.sync(state={}, stream_schema={}, stream_metadata={}, config=config, transformer=None)
         self.assertEqual(mocked_transform.call_count, 1)
         self.assertEqual(mocked_sync_substream.call_count, 1)
-
-    def test_parent_and_child_stream_not_selected_records_writing(self, mocked_sync_substream, mocked_transform, mocked_get_records, mocked_write_schema):
-        """
-            Test case to verify does not write any records when parent and child both streams are not selected
-        """
-        client = IntercomClient('test_access_token', 300)
-        conversations = Conversations(client=client, catalog=Catalog(['test']), selected_streams=['test'])
-        config = {'start_date': '2021-01-01'}
-        state = conversations.sync(state={}, stream_schema={}, stream_metadata={}, config=config, transformer=None)
-        self.assertEqual(state, {})
-        self.assertEqual(mocked_transform.call_count, 0)
-        self.assertEqual(mocked_sync_substream.call_count, 0)
