@@ -40,6 +40,9 @@ class DiscoveryTest(IntercomBaseTest):
         self.assertTrue(all([re.fullmatch(r"[a-z_]+",  name) for name in found_catalog_names]),
                         msg="One or more streams don't follow standard naming")
 
+        # Verify the stream names discovered were what we expect
+        self.assertEqual(found_catalog_names, streams_to_test)
+
         for stream in streams_to_test:
             with self.subTest(stream=stream):
 

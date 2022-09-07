@@ -43,6 +43,10 @@ class intercomInterruptedSyncTest(IntercomBaseTest):
         self.start_date = "2022-07-05T00:00:00Z"
         start_date_datetime = dt.strptime(self.start_date,"%Y-%m-%dT%H:%M:%SZ")
 
+        ##########################################################################
+        ### First Sync
+        ##########################################################################
+
         conn_id = connections.ensure_connection(self, original_properties=False)
 
         expected_streams = {"company_segments","conversations","segments","admins"}
@@ -68,6 +72,10 @@ class intercomInterruptedSyncTest(IntercomBaseTest):
         synced_records_full_sync = runner.get_records_from_target_output()
         full_sync_state = menagerie.get_state(conn_id)
 
+        ##########################################################################
+        ### Update the state between the syncs
+        ##########################################################################
+
         # State for 2nd sync
         state = {
             "currently_syncing": "conversations",
@@ -84,6 +92,10 @@ class intercomInterruptedSyncTest(IntercomBaseTest):
         # Set state for 2nd sync
         menagerie.set_state(conn_id, state)
 
+        ##########################################################################
+        ### Second Sync
+        ##########################################################################
+
         # Run sync after interruption
         record_count_by_stream_interrupted_sync = self.run_and_verify_sync(conn_id)
         synced_records_interrupted_sync = runner.get_records_from_target_output()
@@ -92,7 +104,7 @@ class intercomInterruptedSyncTest(IntercomBaseTest):
 
         expected_replication_method = self.expected_replication_method()
 
-        # Checking resuming sync resulted in a successfull saved state
+        # Checking resuming sync resulted in a successfully saved state
         for stream in expected_streams:
             with self.subTest(stream=stream ):
                 # Verify sync is not interrupted by checking currently_syncing in the state for sync
