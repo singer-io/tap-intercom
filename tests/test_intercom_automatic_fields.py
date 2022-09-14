@@ -15,13 +15,13 @@ class IntercomAutomaticFields(IntercomBaseTest):
 
     def test_run(self):
         """
-        Verify that for each stream you can get multiple pages of data
-        when no fields are selected and only the automatic fields are replicated.
+            Verify that for each stream you can get multiple pages of data
+            when no fields are selected and only the automatic fields are replicated.
 
-        PREREQUISITE
-        For EACH stream add enough data that you surpass the limit of a single
-        fetch of data.  For instance if you have a limit of 250 records ensure
-        that 251 (or more) records have been posted for that stream.
+            PREREQUISITE
+            For EACH stream add enough data that you surpass the limit of a single
+            fetch of data.  For instance, if you have a limit of 250 records ensure
+            that 251 (or more) records have been posted for that stream.
         """
         # Created card for untestable/unstable streams.
         # FIX CARD: https://jira.talendforge.org/browse/TDL-17035

@@ -23,25 +23,25 @@ class intercomInterruptedSyncTest(IntercomBaseTest):
     
     def test_run(self):
         """
-        Scenario: A sync job is interrupted. The state is saved with `currently_syncing`.
-                  The next sync job kicks off and the tap picks back up on that `currently_syncing` stream.
-        Expected State Structure:
-            {
-                "currently_syncing": "stream-name",
-                "bookmarks": {
-                    "stream-name-1": "bookmark-date"
-                    "stream-name-2": "bookmark-date"
+            Scenario: A sync job is interrupted. The state is saved with `currently_syncing`.
+                    The next sync job kicks off and the tap picks back up on that `currently_syncing` stream.
+            Expected State Structure:
+                {
+                    "currently_syncing": "stream-name",
+                    "bookmarks": {
+                        "stream-name-1": "bookmark-date"
+                        "stream-name-2": "bookmark-date"
+                    }
                 }
-            }
-        Test Cases:
-        - Verify an interrupted sync can resume based on the `currently_syncing` and stream level bookmark value.
-        - Verify only records with replication-key values greater than or equal to the stream level bookmark are
-            replicated on the resuming sync for the interrupted stream.
-        - Verify the yet-to-be-synced streams are replicated following the interrupted stream in the resuming sync.
+            Test Cases:
+            - Verify an interrupted sync can resume based on the `currently_syncing` and stream level bookmark value.
+            - Verify only records with replication-key values greater than or equal to the stream level bookmark are
+                replicated on the resuming sync for the interrupted stream.
+            - Verify the yet-to-be-synced streams are replicated following the interrupted stream in the resuming sync.
         """
 
         self.start_date = "2022-07-05T00:00:00Z"
-        start_date_datetime = dt.strptime(self.start_date,"%Y-%m-%dT%H:%M:%SZ")
+        start_date_datetime = dt.strptime(self.start_date, "%Y-%m-%dT%H:%M:%SZ")
 
         ##########################################################################
         ### First Sync
@@ -49,7 +49,7 @@ class intercomInterruptedSyncTest(IntercomBaseTest):
 
         conn_id = connections.ensure_connection(self, original_properties=False)
 
-        expected_streams = {"company_segments","conversations","segments","admins"}
+        expected_streams = {"company_segments", "conversations", "segments", "admins"}
 
         # Run check mode
         found_catalogs = self.run_and_verify_check_mode(conn_id)
@@ -65,7 +65,8 @@ class intercomInterruptedSyncTest(IntercomBaseTest):
             non_selected_properties = non_selected_properties.keys()
             additional_md = []
 
-            connections.select_catalog_and_fields_via_metadata(conn_id,catalog,annoted_schema,additional_md=additional_md,non_selected_fields=non_selected_properties)
+            connections.select_catalog_and_fields_via_metadata(conn_id, catalog, annoted_schema, \
+                additional_md=additional_md, non_selected_fields=non_selected_properties)
             
         # Run sync
         record_count_by_stream_full_sync = self.run_and_verify_sync(conn_id)
@@ -114,13 +115,14 @@ class intercomInterruptedSyncTest(IntercomBaseTest):
                 self.assertIsNotNone(final_state.get('bookmarks'))
 
                 if expected_replication_method[stream] == self.INCREMENTAL:
-                    expected_replication_key = next(iter(self.expected_replication_keys()[stream]))
+                    expected_replication_key = list(self.expected_replication_keys()[stream])[0]
 
                     # Verify final_state is greater than or equal to uninterrupted sync's state.
                     # (This is what the value would have been without an interruption and proves resuming succeeds)
                     # As live data is received and bookmark is getting updated in between the sync, therefore asserting greater than or equal.
-                    for bookmark_full_sync,bookmark_final_state in final_state.get('bookmarks').items():
-                        self.assertGreaterEqual(bookmark_final_state.get(expected_replication_key),full_sync_state.get('bookmarks')[bookmark_full_sync].get(expected_replication_key))
+                    for stream_name, bookmark_final_state in final_state.get('bookmarks').items():
+                        self.assertGreaterEqual(bookmark_final_state.get(expected_replication_key), \
+                            full_sync_state.get('bookmarks')[stream_name].get(expected_replication_key))
                 else:
                     # Verify we do not store any state for FULL_TABLE streams
                     self.assertIsNone(full_sync_state.get('bookmarks').get(stream))
@@ -139,7 +141,7 @@ class intercomInterruptedSyncTest(IntercomBaseTest):
                 if expected_replication_method == self.INCREMENTAL:
 
                     # Gather Expectations
-                    expected_replication_key = next(iter(self.expected_replication_keys()[stream]))
+                    expected_replication_key = list(self.expected_replication_keys()[stream])[0]
                     # Final bookmark after interrupted sync
                     final_stream_bookmark = final_state['bookmarks'][stream].get("updated_at")
                     final_state_bookmark_datetime = dt.strptime(final_stream_bookmark, "%Y-%m-%dT%H:%M:%S.%fZ")
@@ -181,7 +183,7 @@ class intercomInterruptedSyncTest(IntercomBaseTest):
 
                     else:
                         # Get the date to start 2nd sync for non-interrupted streams
-                        synced_stream_bookmark = state['bookmarks'].get(stream,{}).get("updated_at",None)
+                        synced_stream_bookmark = state['bookmarks'].get(stream, {}).get("updated_at", None)
                         if synced_stream_bookmark:
                             synced_stream_datetime = dt.strptime(synced_stream_bookmark, "%Y-%m-%dT%H:%M:%S.%fZ")
                         else:

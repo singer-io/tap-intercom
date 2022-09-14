@@ -15,18 +15,18 @@ class DiscoveryTest(IntercomBaseTest):
 
     def test_run(self):
         """
-        Testing that discovery creates the appropriate catalog with valid metadata.
+            Testing that discovery creates the appropriate catalog with valid metadata.
 
-        • Verify number of actual streams discovered match expected
-        • Verify the stream names discovered were what we expect
-        • Verify stream names follow naming convention
-          streams should only have lowercase alphas and underscores
-        • verify there is only 1 top level breadcrumb
-        • verify replication key(s)
-        • verify primary key(s)
-        • verify that primary, replication and foreign keys
-          are given the inclusion of automatic.
-        • verify that all other fields have inclusion of available metadata.
+            • Verify number of actual streams discovered match expected
+            • Verify the stream names discovered were what we expect
+            • Verify stream names follow naming convention
+            streams should only have lowercase alphas and underscores
+            • verify there is only 1 top level breadcrumb
+            • verify replication key(s)
+            • verify primary key(s)
+            • verify that primary, replication and foreign keys
+            are given the inclusion of automatic.
+            • verify that all other fields have inclusion of available metadata.
         """
         streams_to_test = self.expected_streams()
 
@@ -47,8 +47,7 @@ class DiscoveryTest(IntercomBaseTest):
             with self.subTest(stream=stream):
 
                 # Verify ensure the catalog is found for a given stream
-                catalog = next(iter([catalog for catalog in found_catalogs
-                                     if catalog["stream_name"] == stream]))
+                catalog = [catalog for catalog in found_catalogs if catalog["stream_name"] == stream][0]
                 self.assertIsNotNone(catalog)
 
                 # Collecting expected values

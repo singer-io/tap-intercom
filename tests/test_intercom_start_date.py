@@ -12,7 +12,16 @@ class IntercomStartDateTest(IntercomBaseTest):
         return "tap_tester_intercom_start_date_test"
 
     def test_run(self):
-        """Instantiate start date according to the desired data set and run the test"""
+        """
+            Test that the start_date configuration is respected
+            • verify that a sync with a later start date has at least one record synced
+            and less records than the 1st sync with a previous start date
+            • verify that each stream has less records than the earlier start date sync
+            • verify all data from later start data has bookmark values >= start_date
+            • verify that the minimum bookmark sent to the target for the later start_date sync
+            is greater than or equal to the start date
+            • verify by primary key values, that all records in the 1st sync are included in the 2nd sync.
+        """
         # Created card for untestable/unstable streams.
         # FIX CARD: https://jira.talendforge.org/browse/TDL-17035
         untestable_streams = {"segments", "companies","conversation_parts"}
@@ -21,8 +30,8 @@ class IntercomStartDateTest(IntercomBaseTest):
         self.start_date_1 = self.get_properties().get('start_date')
         self.start_date_2 = self.timedelta_formatted(self.start_date_1, days=2)
 
-        start_date_1_epoch = self.dt_to_ts(self.start_date_1,self.START_DATE_FORMAT)
-        start_date_2_epoch = self.dt_to_ts(self.start_date_2,self.START_DATE_FORMAT)
+        start_date_1_epoch = self.dt_to_ts(self.start_date_1, self.START_DATE_FORMAT)
+        start_date_2_epoch = self.dt_to_ts(self.start_date_2, self.START_DATE_FORMAT)
 
         self.start_date = self.start_date_1
 
@@ -94,21 +103,21 @@ class IntercomStartDateTest(IntercomBaseTest):
 
                 if expected_metadata[self.OBEYS_START_DATE]:
 
-                    bookmark_keys_list_1 = [message.get('data').get(next(iter(expected_replication_keys))) for message in synced_records_1.get(stream).get('messages')
-                                        if message.get('action') == 'upsert']
-                    bookmark_keys_list_2 = [message.get('data').get(next(iter(expected_replication_keys))) for message in synced_records_2.get(stream).get('messages')
-                                        if message.get('action') == 'upsert']
+                    bookmark_keys_list_1 = [message.get('data').get(list(expected_replication_keys)[0]) for message in \
+                        synced_records_1.get(stream).get('messages') if message.get('action') == 'upsert']
+                    bookmark_keys_list_2 = [message.get('data').get(list(expected_replication_keys)[0]) for message in \
+                        synced_records_2.get(stream).get('messages') if message.get('action') == 'upsert']
 
                     bookmark_key_sync_1 = set(bookmark_keys_list_1)
                     bookmark_key_sync_2 = set(bookmark_keys_list_2)
 
                     # Verify bookmark key values are greater than or equal to the start date of sync 1
                     for bookmark_key_value in bookmark_key_sync_1:
-                        self.assertGreaterEqual(self.dt_to_ts(bookmark_key_value,self.RECORD_REPLICATION_KEY_FORMAT), start_date_1_epoch)
+                        self.assertGreaterEqual(self.dt_to_ts(bookmark_key_value, self.RECORD_REPLICATION_KEY_FORMAT), start_date_1_epoch)
 
                     # Verify bookmark key values are greater than or equal to the start date of sync 2
                     for bookmark_key_value in bookmark_key_sync_2:
-                        self.assertGreaterEqual(self.dt_to_ts(bookmark_key_value,self.RECORD_REPLICATION_KEY_FORMAT), start_date_2_epoch)
+                        self.assertGreaterEqual(self.dt_to_ts(bookmark_key_value, self.RECORD_REPLICATION_KEY_FORMAT), start_date_2_epoch)
 
                     # Verify that the 2nd sync with a later start date replicates the same or less numb of
                     # records as the 1st sync.
