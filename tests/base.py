@@ -2,10 +2,13 @@
 Setup expectations for test sub classes
 Run discovery for as a prerequisite for most tests
 """
+import datetime
 import unittest
 import os
 from datetime import timedelta
 from datetime import datetime as dt
+import dateutil.parser
+import pytz
 
 from singer import get_logger
 from tap_tester import connections, menagerie, runner
@@ -58,6 +61,17 @@ class IntercomBaseTest(unittest.TestCase):
     def get_credentials():
         """Authentication information for the test account"""
         return {'access_token': os.getenv('TAP_INTERCOM_ACCESS_TOKEN')}
+
+    @staticmethod
+    def convert_state_to_utc(date_str):
+        """
+        Convert a saved bookmark value of the form '2020-08-25T13:17:36-07:00' to
+        a string formatted utc datetime,
+        in order to compare against json formatted datetime values
+        """
+        date_object = dateutil.parser.parse(date_str)
+        date_object_utc = date_object.astimezone(tz=pytz.UTC)
+        return datetime.datetime.strftime(date_object_utc, "%Y-%m-%dT%H:%M:%SZ")
 
     def expected_metadata(self):
         """The expected streams and metadata about the streams"""

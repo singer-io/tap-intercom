@@ -1,7 +1,5 @@
 import datetime
-from distutils.log import debug
 import dateutil.parser
-import pytz
 
 from tap_tester import runner, menagerie, connections
 
@@ -12,17 +10,6 @@ class IntercomBookmarks(IntercomBaseTest):
     @staticmethod
     def name():
         return "tap_tester_intercom_bookmarks"
-
-    @staticmethod
-    def convert_state_to_utc(date_str):
-        """
-        Convert a saved bookmark value of the form '2020-08-25T13:17:36-07:00' to
-        a string formatted utc datetime,
-        in order to compare against json formatted datetime values
-        """
-        date_object = dateutil.parser.parse(date_str)
-        date_object_utc = date_object.astimezone(tz=pytz.UTC)
-        return datetime.datetime.strftime(date_object_utc, "%Y-%m-%dT%H:%M:%SZ")
 
     def calculated_states_by_stream(self, current_state):
         """
@@ -63,12 +50,19 @@ class IntercomBookmarks(IntercomBaseTest):
 
         return stream_to_calculated_state
 
-
     def test_run(self):
+        streams_with_huge_data = {"conversation_parts", "conversations"}
+
+        self.run_test(self.expected_streams() - streams_with_huge_data)
+
+        self.DAYS = 1
+        self.run_test(streams_with_huge_data)
+
+    def run_test(self, streams_to_sync):
         # Created card for untestable/unstable streams.
         # FIX CARD: https://jira.talendforge.org/browse/TDL-17035
-        untestable_streams = {"companies", "segments", "company_segments", "conversation_parts", "conversations"}
-        expected_streams =  self.expected_streams().difference(untestable_streams)
+        untestable_streams = {"companies", "segments", "company_segments"}
+        expected_streams =  streams_to_sync.difference(untestable_streams)
     
         expected_replication_keys = self.expected_replication_keys()
         expected_replication_methods = self.expected_replication_method()
@@ -179,10 +173,12 @@ class IntercomBookmarks(IntercomBaseTest):
                         )
 
                     for record in first_sync_messages:
-                        # Verify the second sync replication key value is Greater or Equal to the first sync bookmark
-                        replication_key_value = record.get(replication_key)
-                        self.assertGreaterEqual(replication_key_value, simulated_bookmark_value,
-                                                msg="Second sync records do not respect the previous bookmark.")
+                        # This is child stream and bookmark is being written of parent stream. Thus, skipping the stream for assertion
+                        if stream != "conversation_parts":
+                            # Verify the second sync replication key value is Greater or Equal to the first sync bookmark
+                            replication_key_value = record.get(replication_key)
+                            self.assertGreaterEqual(replication_key_value, simulated_bookmark_value,
+                                                    msg="Second sync records do not respect the previous bookmark.")
 
                         # Verify the first sync bookmark value is the max replication key value for a given stream
                         self.assertLessEqual(

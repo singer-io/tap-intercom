@@ -138,7 +138,8 @@ class IncrementalStream(BaseStream):
 
         # Get current stream bookmark
         parent_bookmark = singer.get_bookmark(state, self.tap_stream_id, self.replication_key, config['start_date'])
-        sync_start_date = singer.utils.strptime_to_utc(parent_bookmark)
+        parent_bookmark_utc = singer.utils.strptime_to_utc(parent_bookmark)
+        sync_start_date = parent_bookmark_utc
 
         is_parent_selected = True
         is_child_selected = False
@@ -147,14 +148,16 @@ class IncrementalStream(BaseStream):
         # And update the sync start date to minimum of parent bookmark or child bookmark
         if has_child:
             child_bookmark = singer.get_bookmark(state, child_stream.tap_stream_id, self.replication_key, config['start_date'])
+            child_bookmark_utc = singer.utils.strptime_to_utc(child_bookmark)
+            child_bookmark_ts = child_bookmark_utc.timestamp() * 1000
 
             is_parent_selected = self.tap_stream_id in self.selected_streams
             is_child_selected = child_stream.tap_stream_id in self.selected_streams
 
             if is_parent_selected and is_child_selected:
-                sync_start_date = min(singer.utils.strptime_to_utc(parent_bookmark), singer.utils.strptime_to_utc(child_bookmark))
+                sync_start_date = min(parent_bookmark_utc, child_bookmark_utc)
             elif is_parent_selected:
-                sync_start_date = singer.utils.strptime_to_utc(parent_bookmark)
+                sync_start_date = parent_bookmark_utc
             elif is_child_selected:
                 sync_start_date = singer.utils.strptime_to_utc(child_bookmark)
 
@@ -187,7 +190,7 @@ class IncrementalStream(BaseStream):
                     )
 
                 # Write the record if the parent is selected
-                if is_parent_selected and record_datetime >= sync_start_date:
+                if is_parent_selected and record_datetime >= parent_bookmark_utc:
                     transformed_record = transform(record,
                                                     stream_schema,
                                                     integer_datetime_fmt=UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING,
@@ -197,8 +200,8 @@ class IncrementalStream(BaseStream):
                     counter.increment()
                     max_datetime = max(record_datetime, max_datetime)
 
-                # Sync child stream, if the child is selected
-                if has_child and is_child_selected:
+                # Sync child stream, if the child is selected and if we have records greater than the child stream bookmark
+                if has_child and is_child_selected and (record[self.replication_key] >= child_bookmark_ts):
                     state = child_stream_obj.sync_substream(record.get('id'), child_schema, child_metadata, record[self.replication_key], state)
 
             bookmark_date = singer.utils.strftime(max_datetime)
