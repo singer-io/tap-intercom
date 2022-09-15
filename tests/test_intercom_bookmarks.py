@@ -32,7 +32,7 @@ class IntercomBookmarks(IntercomBaseTest):
         segments            '2021-06-14T00:00:00.000000Z'
                             '2021-06-15T00:00:00.000000Z'
         """
-        timedelta_by_stream = {stream: [30,0,0]  # {stream_name: [days, hours, minutes], ...}
+        timedelta_by_stream = {stream: [1,0,0]  # {stream_name: [days, hours, minutes], ...}
                                for stream in self.expected_streams()}
 
         stream_to_calculated_state = {stream: "" for stream in current_state['bookmarks'].keys()}
@@ -51,7 +51,7 @@ class IntercomBookmarks(IntercomBaseTest):
         return stream_to_calculated_state
 
     def test_run(self):
-        streams_with_huge_data = {"conversation_parts", "conversations"}
+        streams_with_huge_data = {"conversations"}
 
         self.run_test(self.expected_streams() - streams_with_huge_data)
 
@@ -61,20 +61,17 @@ class IntercomBookmarks(IntercomBaseTest):
     def run_test(self, streams_to_sync):
         # Created card for untestable/unstable streams.
         # FIX CARD: https://jira.talendforge.org/browse/TDL-17035
-        untestable_streams = {"companies", "segments", "company_segments"}
+        # The stream: "conversation_parts" is child stream and bookmark is being written of parent stream. Thus, skipping the stream
+        untestable_streams = {"companies", "segments", "company_segments", "conversation_parts"}
         expected_streams =  streams_to_sync.difference(untestable_streams)
     
         expected_replication_keys = self.expected_replication_keys()
         expected_replication_methods = self.expected_replication_method()
 
-        self.start_date_1 = self.get_properties().get("start_date")
-        self.start_date_2 = self.timedelta_formatted(self.start_date_1, days=3)
-
         ##########################################################################
         ### First Sync
         ##########################################################################
 
-        self.start_date = self.start_date_1
         conn_id = connections.ensure_connection(self, original_properties=True)
 
         # Run in check mode
@@ -102,17 +99,6 @@ class IntercomBookmarks(IntercomBaseTest):
         ##########################################################################
         ### Second Sync
         ##########################################################################
-
-        self.start_date = self.start_date_2
-        conn_id = connections.ensure_connection(self, original_properties=False)
-
-        # run check mode
-        found_catalogs = self.run_and_verify_check_mode(conn_id)
-
-        # table and field selection
-        test_catalogs_2_all_fields = [catalog for catalog in found_catalogs
-                                      if catalog.get('tap_stream_id') in expected_streams]
-        self.perform_and_verify_table_and_field_selection(conn_id, test_catalogs_2_all_fields, select_all_fields=True)
 
         second_sync_record_count = self.run_and_verify_sync(conn_id)
         second_sync_records = runner.get_records_from_target_output()
@@ -164,26 +150,24 @@ class IntercomBookmarks(IntercomBaseTest):
                     self.assertGreaterEqual(second_bookmark_value, first_bookmark_value)
 
 
-                    for record in second_sync_messages:
-                        # Verify the second sync bookmark value is the max replication key value for a given stream
-                        replication_key_value = record.get(replication_key)
-                        self.assertLessEqual(
-                            replication_key_value, second_bookmark_value_utc,
-                            msg="Second sync bookmark was set incorrectly, a record with a greater replication-key value was synced."
-                        )
-
                     for record in first_sync_messages:
-                        # This is child stream and bookmark is being written of parent stream. Thus, skipping the stream for assertion
-                        if stream != "conversation_parts":
-                            # Verify the second sync replication key value is Greater or Equal to the first sync bookmark
-                            replication_key_value = record.get(replication_key)
-                            self.assertGreaterEqual(replication_key_value, simulated_bookmark_value,
-                                                    msg="Second sync records do not respect the previous bookmark.")
-
-                        # Verify the first sync bookmark value is the max replication key value for a given stream
+                        # Verify the First sync bookmark value is the max replication key value for a given stream
+                        replication_key_value = record.get(replication_key)
                         self.assertLessEqual(
                             replication_key_value, first_bookmark_value_utc,
                             msg="First sync bookmark was set incorrectly, a record with a greater replication-key value was synced."
+                        )
+
+                    for record in second_sync_messages:
+                        # Verify the second sync replication key value is Greater or Equal to the Ssecond sync bookmark
+                        replication_key_value = record.get(replication_key)
+                        self.assertGreaterEqual(replication_key_value, simulated_bookmark_value,
+                                                msg="Second sync records do not respect the previous bookmark.")
+
+                        # Verify the second sync bookmark value is the max replication key value for a given stream
+                        self.assertLessEqual(
+                            replication_key_value, second_bookmark_value_utc,
+                            msg="Second sync bookmark was set incorrectly, a record with a greater replication-key value was synced."
                         )
 
                     # Verify the number of records in the 2nd sync is less then the first
