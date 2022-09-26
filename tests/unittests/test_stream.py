@@ -25,19 +25,19 @@ class TestData(unittest.TestCase):
         Verify get_records for stream
         """
         
-        test_stream = data[0](self.base_client)
+        test_stream = data[0](self.base_client, None, [])
         mocked_client.side_effect = data[1]
 
         test_data = list(test_stream.get_records())
         self.assertEqual(test_data,expected_data)
     
-    @mock.patch("tap_intercom.streams.BaseStream.get_parent_data")
+    @mock.patch("tap_intercom.streams.Admins.get_parent_data")
     @mock.patch("tap_intercom.client.IntercomClient.get")
     def test_admin_get_records(self,mocked_client,mocked_parent_data):
         """
         Verify get_records for Admin stream
         """
-        test_stream = Admins(self.base_client)
+        test_stream = Admins(self.base_client, None, ['admins'])
         
         mocked_parent_data.return_value = ['id']
         mocked_client.return_value = 'test'
@@ -65,7 +65,7 @@ class TestData(unittest.TestCase):
         """
         Verify get_records for AdminList
         """
-        test_stream = AdminList(self.base_client)
+        test_stream = AdminList(self.base_client, None, ['admin_list'])
         
         mocked_client.return_value = {}
         
@@ -80,9 +80,9 @@ class TestData(unittest.TestCase):
         """
         Verify get_records for Contacts stream
         """
-        test_stream = Contacts(self.base_client)
+        test_stream = Contacts(self.base_client, None, ['contacts'])
 
-        test_data = list(test_stream.get_records(metadata={}))
+        test_data = list(test_stream.get_records(stream_metadata={}))
         expected_data = [{'key': 'value'}]
         
         self.assertEqual(test_data,expected_data)
@@ -98,7 +98,7 @@ class TestFullTable(unittest.TestCase):
         """
         Verify sync for a full_table stream
         """
-        test_stream = CompanyAttributes(self.base_client)
+        test_stream = CompanyAttributes(self.base_client, None, ['company_attributes'])
         mocked__client_get.return_value = {'data':[{"key": "value"}],'pages':{'next':''}}
         test_data = test_stream.sync("test","","","","")
 

@@ -13,7 +13,7 @@ class TestAddressableListFields(unittest.TestCase):
             Test case to verify we do not do API call if the field is not selected
         """
         client = IntercomClient('test_access_token', 100, None)
-        contacts = Contacts(client)
+        contacts = Contacts(client, None, ['contacts'])
         contact_list = {
             'data': [
                 {
@@ -77,7 +77,7 @@ class TestAddressableListFields(unittest.TestCase):
             Test case to verify we do not do API call if the field has 0 record
         """
         client = IntercomClient('test_access_token', 100, None)
-        contacts = Contacts(client)
+        contacts = Contacts(client, None, ['contacts'])
         contact_list = {
             'data': [
                 {
@@ -153,7 +153,7 @@ class TestAddressableListFields(unittest.TestCase):
         }
 
         client = IntercomClient('test_access_token', 100, None)
-        contacts = Contacts(client)
+        contacts = Contacts(client, None, ['contacts'])
         contact_list = {
             'data': [
                 {
@@ -306,7 +306,7 @@ class TestAddressableListFields(unittest.TestCase):
         }]
 
         client = IntercomClient('test_access_token', 100, None)
-        contacts = Contacts(client)
+        contacts = Contacts(client, None, ['contacts'])
         contact_list = {
             'data': [
                 {

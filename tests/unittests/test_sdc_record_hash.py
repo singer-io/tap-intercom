@@ -19,7 +19,7 @@ class TestSDCRecordHash(unittest.TestCase):
             Test cases to verify we generate a hash of id, name and description and add it in the '_sdc_record_hash' field
         """
         client = IntercomClient('test_access_token', 300)
-        stream = BaseStream(client)
+        stream = BaseStream(client, None, [])
         hashed_records = stream.generate_record_hash(test_data)
 
         self.assertIsNotNone(hashed_records)
@@ -41,7 +41,7 @@ class TestSDCRecordHash(unittest.TestCase):
             Test cases to verify we generate hash of fields for company and contact attributes streams
         """
         client = IntercomClient('test_access_token', 300)
-        stream = test_data(client)
+        stream = test_data(client, None, [])
         stream.sync({}, {}, {}, {}, None)
 
         write_record_calls = mocked_write_record.mock_calls
