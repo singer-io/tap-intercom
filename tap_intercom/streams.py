@@ -4,6 +4,8 @@ This module defines the stream classes and their individual sync logic.
 
 
 import datetime
+import hashlib
+import time
 from typing import Iterator
 
 import singer
@@ -64,6 +66,26 @@ class BaseStream:
         # pylint: disable=not-callable
         parent = self.parent(self.client)
         return parent.get_records(bookmark_datetime, is_parent=True)
+
+    def generate_record_hash(self, original_record):
+        """
+            Function to generate the hash of name, full_name and label to use it as a Primary Key
+        """
+        # There are 2 types for data_attributes in Intercom
+        # -> Default: As discussed with support, there is an 'id' for custom data_attributes and that will be unique
+        # -> Custom: Used 'name' and 'description' for identifying the data uniquely
+        fields_to_hash = ['id', 'name', 'description']
+        hash_string = ''
+
+        for key in fields_to_hash:
+            hash_string += str(original_record.get(key, ''))
+
+        hash_string_bytes = hash_string.encode('utf-8')
+        hashed_string = hashlib.sha256(hash_string_bytes).hexdigest()
+
+        # Add Primary Key hash in the record
+        original_record['_sdc_record_hash'] = hashed_string
+        return original_record
 
     @staticmethod
     def epoch_milliseconds_to_dt_str(timestamp: float) -> str:
@@ -168,6 +190,8 @@ class FullTableStream(BaseStream):
     :param client: The API client used extract records from the external source
     """
     replication_method = 'FULL_TABLE'
+    # Boolean flag to do sync with activate version for Company and Contact Attributes streams
+    sync_with_version = False
 
     # Disabled `unused-argument` as it causing pylint error.
     # Method which call this `sync` method is passing unused argument. So, removing argument would not work.
@@ -188,9 +212,22 @@ class FullTableStream(BaseStream):
         :return: State data in the form of a dictionary
         """
         schema_datetimes = find_datetimes_in_schema(stream_schema)
+        if self.sync_with_version:
+            # Write activate version message
+            activate_version = int(time.time() * 1000)
+            activate_version_message = singer.ActivateVersionMessage(
+                stream=self.tap_stream_id,
+                version=activate_version)
+            singer.write_message(activate_version_message)
 
         with metrics.record_counter(self.tap_stream_id) as counter:
             for record in self.get_records():
+
+                # For company and contact attributes, it is difficult to define a Primary Key
+                # Thus we create a hash of some records and use it as the PK
+                if self.tap_stream_id in ['company_attributes', 'contact_attributes']:
+                    record = self.generate_record_hash(record)
+
                 transform_times(record, schema_datetimes)
 
                 transformed_record = transform(record,
@@ -198,10 +235,18 @@ class FullTableStream(BaseStream):
                                                 integer_datetime_fmt=UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING,
                                                 metadata=stream_metadata)
                 # Write records with time_extracted field
-                singer.write_record(self.tap_stream_id, transformed_record, time_extracted=singer.utils.now())
+                if self.sync_with_version:
+                    # Using "write_message" if the version is found. As "write_record" params do not contain "version"
+                    singer.write_message(singer.RecordMessage(stream=self.tap_stream_id, record=transformed_record, version=activate_version, time_extracted=singer.utils.now()))
+                else:
+                    singer.write_record(self.tap_stream_id, transformed_record, time_extracted=singer.utils.now())
                 counter.increment()
 
             LOGGER.info("FINISHED Syncing: {}, total_records: {}.".format(self.tap_stream_id, counter.value))
+
+        # Write activate version after syncing
+        if self.sync_with_version:
+            singer.write_message(activate_version_message)
 
         return state
 
@@ -299,10 +344,14 @@ class CompanyAttributes(FullTableStream):
     Docs: https://developers.intercom.com/intercom-api-reference/v2.0/reference#list-data-attributes
     """
     tap_stream_id = 'company_attributes'
-    key_properties = ['name']
+    key_properties = ['_sdc_record_hash']
     path = 'data_attributes'
     params = {'model': 'company'}
     data_key = 'data'
+    # Sync with activate version
+    # As we are preparing the hash of ['id', 'name', 'description'] and using it as the Primary Key and there are chances
+    # of field value being updated, thus, on the target side, there will be a redundant entry of the same record.
+    sync_with_version = True
 
     def get_records(self, bookmark_datetime=None, is_parent=False) -> Iterator[list]:
         paging = True
@@ -513,10 +562,14 @@ class ContactAttributes(FullTableStream):
     Docs: https://developers.intercom.com/intercom-api-reference/v2.0/reference#list-data-attributes
     """
     tap_stream_id = 'contact_attributes'
-    key_properties = ['name']
+    key_properties = ['_sdc_record_hash']
     path = 'data_attributes'
     params = {'model': 'contact'}
     data_key = 'data'
+    # Sync with activate version
+    # As we are preparing the hash of ['id', 'name', 'description'] and using it as the Primary Key and there are chances
+    # of field value being updated, thus, on the target side, there will be a redundant entry of the same record.
+    sync_with_version = True
 
     def get_records(self, bookmark_datetime=None, is_parent=False) -> Iterator[list]:
         LOGGER.info("Syncing: {}".format(self.tap_stream_id))
