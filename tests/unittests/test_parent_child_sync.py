@@ -55,7 +55,7 @@ class TestParentChildSync(unittest.TestCase):
         state = test_data[1]
         config = {'start_date': '2021-01-01'}
         conversations.sync(state=state, stream_schema={}, stream_metadata={}, config=config, transformer=None)
-        mocked_get_records.assert_called_with(singer.utils.strptime_to_utc(expected_data), metadata={})
+        mocked_get_records.assert_called_with(singer.utils.strptime_to_utc(expected_data), stream_metadata={})
 
 @mock.patch('singer.write_schema')
 @mock.patch('tap_intercom.streams.Conversations.get_records', side_effect = [[{'id': 1, 'updated_at': 1609804800000}]]) # '2021-01-05'
