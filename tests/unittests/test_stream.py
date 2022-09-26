@@ -74,7 +74,7 @@ class TestData(unittest.TestCase):
         
         self.assertEqual(mocked_logger.call_count,1)
     
-    @mock.patch("tap_intercom.client.IntercomClient.post",side_effect =[{'data':['test1'],'pages':{'next':''}}])
+    @mock.patch("tap_intercom.client.IntercomClient.post",side_effect =[{'data':[{'key': 'value', 'tags': {}, 'companies': {}}],'pages':{'next':''}}])
     @mock.patch("tap_intercom.streams.BaseStream.dt_to_epoch_seconds")
     def test_contacts_get_records(self,mocked_time,mocked_client):
         """
@@ -82,8 +82,8 @@ class TestData(unittest.TestCase):
         """
         test_stream = Contacts(self.base_client)
 
-        test_data = list(test_stream.get_records())
-        expected_data = ['test1']
+        test_data = list(test_stream.get_records(metadata={}))
+        expected_data = [{'key': 'value'}]
         
         self.assertEqual(test_data,expected_data)
     
@@ -99,7 +99,7 @@ class TestFullTable(unittest.TestCase):
         Verify sync for a full_table stream
         """
         test_stream = CompanyAttributes(self.base_client)
-        mocked__client_get.return_value = {'data':["test"],'pages':{'next':''}}
+        mocked__client_get.return_value = {'data':[{"key": "value"}],'pages':{'next':''}}
         test_data = test_stream.sync("test","","","","")
 
         self.assertEqual(test_data,"test")
