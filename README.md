@@ -6,7 +6,7 @@ spec](https://github.com/singer-io/getting-started/blob/master/SPEC.md).
 
 This tap:
 
-- Pulls raw data from the [Intercom v1.4 API](https://developers.intercom.com/intercom-api-reference/reference#introduction)
+- Pulls raw data from the [Intercom v2.5 API](https://developers.intercom.com/intercom-api-reference/v2.5/reference)
 - Extracts the following resources:
   - [Admins](https://developers.intercom.com/intercom-api-reference/reference#list-admins)
   - [Companies](https://developers.intercom.com/intercom-api-reference/reference#list-companies)

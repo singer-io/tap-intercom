@@ -247,6 +247,18 @@
             "null",
             "string"
           ]
+        },
+        "country_code": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "continent_code": {
+          "type": [
+            "null",
+            "string"
+          ]
         }
       }
     },
