@@ -25,6 +25,7 @@ class IntercomError(Exception):
 class IntercomBadRequestError(IntercomError):
     pass
 
+
 class IntercomScrollExistsError(IntercomError):
     pass
 
@@ -73,64 +74,137 @@ class IntercomUnprocessableEntityError(IntercomError):
     pass
 
 
-class IntercomInternalServiceError(IntercomError):
+class IntercomInternalServiceError(Server5xxError):
     pass
 
 
-# Error codes: https://developers.intercom.com/intercom-api-reference/reference#http-responses
+class IntercomRateLimitError(Server429Error):
+    pass
+
+
+class IntercomBadGatewayError(Server5xxError):
+    pass
+
+
+class IntercomServiceUnavailableError(Server5xxError):
+    pass
+
+
+class IntercomGatewayTimeoutError(Server5xxError):
+    pass
+
+
+# Error codes: https://developers.intercom.com/intercom-api-reference/reference/http-responses
 ERROR_CODE_EXCEPTION_MAPPING = {
-    400: IntercomBadRequestError,
-    401: IntercomUnauthorizedError,
-    402: IntercomPaymentRequiredError,
-    403: IntercomForbiddenError,
-    404: IntercomNotFoundError,
-    405: IntercomMethodNotAllowedError,
-    406: IntercomNotAcceptableError,
-    408: IntercomRequestTimeoutError,
-    409: IntercomUserConflictError,
-    415: IntercomUnsupportedMediaTypeError,
-    422: IntercomUnprocessableEntityError,
-    423: IntercomScrollExistsError,
-    500: IntercomInternalServiceError}
+    400: {
+        "raise_exception": IntercomBadRequestError,
+        "message": "General client error, possibly malformed data."
+    },
+    401: {
+        "raise_exception": IntercomUnauthorizedError,
+        "message": "The API Key was not authorized (or no API Key was found)."
+    },
+    402: {
+        "raise_exception": IntercomPaymentRequiredError,
+        "message": "The API is not available on your current plan."
+    },
+    403: {
+        "raise_exception": IntercomForbiddenError,
+        "message": "The request is not allowed."
+    },
+    404: {
+        "raise_exception": IntercomNotFoundError,
+        "message": "The resource was not found."
+    },
+    405: {
+        "raise_exception": IntercomMethodNotAllowedError,
+        "message": "The resource does not accept the HTTP method."
+    },
+    406: {
+        "raise_exception": IntercomNotAcceptableError,
+        "message": "The resource cannot return the client's required content type."
+    },
+    408: {
+        "raise_exception": IntercomRequestTimeoutError,
+        "message": "The server would not wait any longer for the client."
+    },
+    409: {
+        "raise_exception": IntercomUserConflictError,
+        "message": "Multiple existing users match this email address - must be more specific using user_id"
+    },
+    415: {
+        "raise_exception": IntercomUnsupportedMediaTypeError,
+        "message": "The server doesn't accept the submitted content-type."
+    },
+    422: {
+        "raise_exception": IntercomUnprocessableEntityError,
+        "message": "The data was well-formed but invalid."
+    },
+    423: {
+        "raise_exception": IntercomScrollExistsError,
+        "message": "The source or destination resource of a method is locked."
+    },
+    429: {
+        "raise_exception": IntercomRateLimitError,
+        "message": "The client has reached or exceeded a rate limit."
+    },
+    500: {
+        "raise_exception": IntercomInternalServiceError,
+        "message": "An unhandled error with the Intercom API."
+    },
+    502: {
+        "raise_exception": IntercomBadGatewayError,
+        "message": "Received an invalid response from the upstream server."
+    },
+    503: {
+        "raise_exception": IntercomServiceUnavailableError,
+        "message": "Intercom API service is currently unavailable."
+    },
+    504: {
+        "raise_exception": IntercomGatewayTimeoutError,
+        "message": "The server did not receive a timely response from an upstream server."
+    }}
 
 
 def get_exception_for_error_code(error_code, intercom_error_code):
+    """Maps the error_code to respective error_message """
 
     if intercom_error_code == 'scroll_exists':
         error_code = 423
-    return ERROR_CODE_EXCEPTION_MAPPING.get(error_code, IntercomError)
+
+    exception = ERROR_CODE_EXCEPTION_MAPPING.get(error_code, {}).get("raise_exception")
+    if not exception:
+        exception = Server5xxError if error_code >= 500 else IntercomError
+    return exception
 
 def raise_for_error(response):
+    """Raises error class with appropriate msg for the response"""
     try:
-        response.raise_for_status()
-    except (requests.HTTPError, requests.ConnectionError) as error:
-        try:
-            content_length = len(response.content)
-            if content_length == 0:
-                # There is nothing we can do here since Intercom has neither sent
-                # us a 2xx response nor a response content.
-                return
-            response_json = response.json()
-            status_code = response.status_code
-            LOGGER.error('RESPONSE: {}'.format(response_json))
-            # Error Message format:
-            #  https://developers.intercom.com/intercom-api-reference/reference#error-objects
-            if response_json.get('type') == 'error.list':
-                message = ''
-                for err in response_json['errors']:
-                    error_message = err.get('message')
-                    error_code = err.get('code')
-                    ex = get_exception_for_error_code(error_code=status_code, intercom_error_code=error_code)
-                    if status_code == 401 and 'access_token' in error_code:
-                        LOGGER.error("Your API access_token is expired/invalid as per Intercom’s "\
-                            "security policy. \n Please re-authenticate your connection to "\
-                            "generate a new access_token and resume extraction.")
-                    message = '{}: {}\n{}'.format(error_code, error_message, message)
-                raise ex('{}'.format(message)) from error
-            raise IntercomError(error) from error
-        except (ValueError, TypeError) as inner_error:
-            raise IntercomError(error) from inner_error
+        response_json = response.json() # Retrieve json response
+    except Exception: # pylint: disable=broad-except
+        response_json = {}
+    errors = response_json.get('errors', [])
+    status_code = response.status_code
+    intercom_error_code = ''
 
+    #  https://developers.intercom.com/intercom-api-reference/reference/error-objects
+    if errors: # Response containing `errors` object
+
+        if len(errors) > 1:
+            message = "HTTP-error-code: {}, Error:{}".format(status_code,errors)
+        else:
+            err_msg = errors[0].get('message')
+            intercom_error_code = errors[0].get('code')
+            message = "HTTP-error-code: {}, Error:{}, Error_Code:{}".format(status_code,err_msg,intercom_error_code)
+    else:
+        # Prepare custom default error message
+        message = "HTTP-error-code: {}, Error: {}".format(status_code,
+                response_json.get("message", ERROR_CODE_EXCEPTION_MAPPING.get(
+                status_code, {}).get("message", "Unknown Error")))
+
+    exc = get_exception_for_error_code(error_code = status_code, intercom_error_code = intercom_error_code)
+
+    raise exc(message) from None
 
 class IntercomClient(object):
     def __init__(self,
@@ -163,7 +237,7 @@ class IntercomClient(object):
         self.__session.close()
 
     @backoff.on_exception(backoff.expo,
-                          (Server5xxError, ConnectionError, Server429Error),
+                          (Server5xxError, ConnectionError, IntercomRateLimitError),
                           max_tries=7,
                           factor=3)
     @utils.ratelimit(1000, 60)
@@ -194,7 +268,7 @@ class IntercomClient(object):
     #  https://developers.intercom.com/intercom-api-reference/reference#rate-limiting
     @backoff.on_exception(backoff.expo, Timeout, max_tries=5, factor=2) # Backoff for request timeout
     @backoff.on_exception(backoff.expo,
-                          (Server5xxError, ConnectionError, Server429Error, IntercomScrollExistsError),
+                          (Server5xxError, ConnectionError, IntercomRateLimitError, IntercomScrollExistsError),
                           max_tries=7,
                           factor=3)
     @utils.ratelimit(1000, 60)
@@ -228,9 +302,6 @@ class IntercomClient(object):
         with metrics.http_request_timer(endpoint) as timer:
             response = self.__session.request(method, url, timeout=self.__request_timeout, **kwargs) # Pass request timeout
             timer.tags[metrics.Tag.http_status_code] = response.status_code
-
-        if response.status_code >= 500:
-            raise Server5xxError()
 
         if response.status_code != 200:
             raise_for_error(response)
