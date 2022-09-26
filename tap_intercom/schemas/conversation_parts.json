@@ -175,6 +175,12 @@
         "string"
       ],
       "format": "date-time"
+    },
+    "redacted": {
+      "type": [
+        "null",
+        "boolean"
+      ]
     }
   }
 }

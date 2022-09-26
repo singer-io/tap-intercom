@@ -101,6 +101,10 @@
     },
     "website": {
       "type": ["null", "string"]
+    },
+    "last_request_at": {
+      "type": ["null", "string"],
+      "format": "date-time"
     }
   }
 }

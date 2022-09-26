@@ -58,6 +58,12 @@
     "updated_at": {
       "type": ["null", "string"],
       "format": "date-time"
+    },
+    "id": {
+      "type": ["null", "integer"]
+    },
+    "_sdc_record_hash": {
+      "type": ["null", "string"]
     }
   }
 }

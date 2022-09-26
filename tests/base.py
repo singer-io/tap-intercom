@@ -75,7 +75,7 @@ class IntercomBaseTest(unittest.TestCase):
                 self.OBEYS_START_DATE : True
             },
             "company_attributes": {
-                self.PRIMARY_KEYS: {"name"},
+                self.PRIMARY_KEYS: {"_sdc_record_hash"},
                 self.REPLICATION_METHOD: self.FULL_TABLE,
                 self.OBEYS_START_DATE : False
             },
@@ -98,7 +98,7 @@ class IntercomBaseTest(unittest.TestCase):
                 self.OBEYS_START_DATE : True
             },
             "contact_attributes": {
-                self.PRIMARY_KEYS: {"name"},
+                self.PRIMARY_KEYS: {"_sdc_record_hash"},
                 self.REPLICATION_METHOD: self.FULL_TABLE,
                 self.OBEYS_START_DATE : False
             },
