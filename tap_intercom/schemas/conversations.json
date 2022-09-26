@@ -124,6 +124,12 @@
             "null",
             "string"
           ]
+        },
+        "redacted": {
+          "type": [
+            "null",
+            "boolean"
+          ]
         }
       }
     },
@@ -433,6 +439,26 @@
               ]
             }
           }
+        },
+        "contact": {
+          "type": [
+            "null",
+            "object"
+          ],
+          "properties": {
+            "id": {
+              "type": [
+                "null",
+                "string"
+              ]
+            },
+            "type": {
+              "type": [
+                "null",
+                "string"
+              ]
+            }
+          }
         }
       }
     },
@@ -688,6 +714,38 @@
             "null",
             "integer"
           ]
+        },
+        "last_closed_by": {
+          "type": [
+            "null",
+            "object"
+          ],
+          "properties": {
+            "id": {
+              "type": [
+                "null",
+                "string"
+              ]
+            },
+            "name": {
+              "type": [
+                "null",
+                "string"
+              ]
+            },
+            "email": {
+              "type": [
+                "null",
+                "string"
+              ]
+            },
+            "type": {
+              "type": [
+                "null",
+                "string"
+              ]
+            }
+          }
         }
       }
     },
@@ -792,6 +850,44 @@
         "string"
       ],
       "format": "date-time"
+    },
+    "title": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "admin_assignee_id": {
+      "type": [
+        "null",
+        "integer"
+      ]
+    },
+    "team_assignee_id": {
+      "type": [
+        "null",
+        "integer"
+      ]
+    },
+    "custom_attributes": {
+      "type": [
+        "null",
+        "object"
+      ],
+      "properties": {
+        "issue_type": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "priority": {
+          "type": [
+            "null",
+            "string"
+          ]
+        }
+      }
     }
   }
 }
