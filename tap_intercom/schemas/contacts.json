@@ -335,66 +335,21 @@
     "tags": {
       "type": [
         "null",
-        "object"
+        "array"
       ],
-      "additionalProperties": false,
-      "properties": {
-        "type": {
-          "type": [
-            "null",
-            "string"
-          ]
-        },
-        "data": {
-          "type": [
-            "null",
-            "array"
-          ],
-          "items": {
+      "items": {
+        "type": [
+          "null",
+          "object"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
             "type": [
               "null",
-              "object"
-            ],
-            "additionalProperties": false,
-            "properties": {
-              "type": {
-                "type": [
-                  "null",
-                  "string"
-                ]
-              },
-              "id": {
-                "type": [
-                  "null",
-                  "string"
-                ]
-              },
-              "url": {
-                "type": [
-                  "null",
-                  "string"
-                ]
-              }
-            }
+              "string"
+            ]
           }
-        },
-        "url": {
-          "type": [
-            "null",
-            "string"
-          ]
-        },
-        "total_count": {
-          "type": [
-            "null",
-            "integer"
-          ]
-        },
-        "has_more": {
-          "type": [
-            "null",
-            "boolean"
-          ]
         }
       }
     },
@@ -467,66 +422,21 @@
     "companies": {
       "type": [
         "null",
-        "object"
+        "array"
       ],
-      "additionalProperties": false,
-      "properties": {
-        "type": {
-          "type": [
-            "null",
-            "string"
-          ]
-        },
-        "data": {
-          "type": [
-            "null",
-            "array"
-          ],
-          "items": {
+      "items": {
+        "type": [
+          "null",
+          "object"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
             "type": [
               "null",
-              "object"
-            ],
-            "additionalProperties": false,
-            "properties": {
-              "type": {
-                "type": [
-                  "null",
-                  "string"
-                ]
-              },
-              "id": {
-                "type": [
-                  "null",
-                  "string"
-                ]
-              },
-              "url": {
-                "type": [
-                  "null",
-                  "string"
-                ]
-              }
-            }
+              "string"
+            ]
           }
-        },
-        "url": {
-          "type": [
-            "null",
-            "string"
-          ]
-        },
-        "total_count": {
-          "type": [
-            "null",
-            "integer"
-          ]
-        },
-        "has_more": {
-          "type": [
-            "null",
-            "boolean"
-          ]
         }
       }
     }
