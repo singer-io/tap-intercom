@@ -2,13 +2,16 @@
 Setup expectations for test sub classes
 Run discovery for as a prerequisite for most tests
 """
+import datetime
+import time
 import unittest
 import os
 from datetime import timedelta
 from datetime import datetime as dt
+import dateutil.parser
+import pytz
 
-from singer import get_logger
-from tap_tester import connections, menagerie, runner
+from tap_tester import connections, menagerie, runner, LOGGER
 
 
 class IntercomBaseTest(unittest.TestCase):
@@ -24,12 +27,13 @@ class IntercomBaseTest(unittest.TestCase):
     PRIMARY_KEYS = "table-key-properties"
     FOREIGN_KEYS = "table-foreign-key-properties"
     REPLICATION_METHOD = "forced-replication-method"
+    OBEYS_START_DATE = "obeys-start-date"
     API_LIMIT = "max-row-limit"
     INCREMENTAL = "INCREMENTAL"
     FULL_TABLE = "FULL_TABLE"
     START_DATE_FORMAT = "%Y-%m-%dT00:00:00Z"
+    RECORD_REPLICATION_KEY_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
     BOOKMARK_COMPARISON_FORMAT = "%Y-%m-%dT00:00:00+00:00"
-    LOGGER = get_logger()
     DAYS = 20
     start_date= (dt.now()-timedelta(days=DAYS)).strftime(START_DATE_FORMAT)
 
@@ -59,58 +63,80 @@ class IntercomBaseTest(unittest.TestCase):
         """Authentication information for the test account"""
         return {'access_token': os.getenv('TAP_INTERCOM_ACCESS_TOKEN')}
 
+    @staticmethod
+    def convert_state_to_utc(date_str):
+        """
+        Convert a saved bookmark value of the form '2020-08-25T13:17:36-07:00' to
+        a string formatted utc datetime,
+        in order to compare against json formatted datetime values
+        """
+        date_object = dateutil.parser.parse(date_str)
+        date_object_utc = date_object.astimezone(tz=pytz.UTC)
+        return datetime.datetime.strftime(date_object_utc, "%Y-%m-%dT%H:%M:%SZ")
+
     def expected_metadata(self):
         """The expected streams and metadata about the streams"""
         return {
             "admins": {
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.FULL_TABLE,
+                self.OBEYS_START_DATE : False
             },
             "companies": {
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"updated_at"}
+                self.REPLICATION_KEYS: {"updated_at"},
+                self.OBEYS_START_DATE : True
             },
             "company_attributes": {
-                self.PRIMARY_KEYS: {"name"},
-                self.REPLICATION_METHOD: self.FULL_TABLE
+                self.PRIMARY_KEYS: {"_sdc_record_hash"},
+                self.REPLICATION_METHOD: self.FULL_TABLE,
+                self.OBEYS_START_DATE : False
             },
             "company_segments": {
                 self.PRIMARY_KEYS: {"id", },
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"updated_at"}
+                self.REPLICATION_KEYS: {"updated_at"},
+                self.OBEYS_START_DATE : True
             },
             "conversations": {
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"updated_at"}
+                self.REPLICATION_KEYS: {"updated_at"},
+                self.OBEYS_START_DATE : True
             },
             "conversation_parts": {
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"updated_at"}
+                self.REPLICATION_KEYS: {"updated_at"},
+                self.OBEYS_START_DATE : True
             },
             "contact_attributes": {
-                self.PRIMARY_KEYS: {"name"},
-                self.REPLICATION_METHOD: self.FULL_TABLE
+                self.PRIMARY_KEYS: {"_sdc_record_hash"},
+                self.REPLICATION_METHOD: self.FULL_TABLE,
+                self.OBEYS_START_DATE : False
             },
             "contacts": {
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"updated_at"}
+                self.REPLICATION_KEYS: {"updated_at"},
+                self.OBEYS_START_DATE : True
             },
             "segments": {
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"updated_at"}
+                self.REPLICATION_KEYS: {"updated_at"},
+                self.OBEYS_START_DATE : True
             },
             "tags": {
                 self.PRIMARY_KEYS: {'id'},
-                self.REPLICATION_METHOD: self.FULL_TABLE
+                self.REPLICATION_METHOD: self.FULL_TABLE,
+                self.OBEYS_START_DATE : False
             },
             "teams": {
                 self.PRIMARY_KEYS: {'id'},
-                self.REPLICATION_METHOD: self.FULL_TABLE
+                self.REPLICATION_METHOD: self.FULL_TABLE,
+                self.OBEYS_START_DATE : False
             }
         }
 
@@ -198,7 +224,7 @@ class IntercomBaseTest(unittest.TestCase):
         found_catalog_names = set(map(lambda c: c['stream_name'], found_catalogs))
 
         self.assertSetEqual(self.expected_streams(), found_catalog_names, msg="discovered schemas do not match")
-        print("discovered schemas are OK")
+        LOGGER.info("discovered schemas are OK")
 
         return found_catalogs
 
@@ -222,7 +248,7 @@ class IntercomBaseTest(unittest.TestCase):
             sum(sync_record_count.values()), 0,
             msg="failed to replicate any data: {}".format(sync_record_count)
         )
-        print("total replicated row count: {}".format(sum(sync_record_count.values())))
+        LOGGER.info("total replicated row count: {}".format(sum(sync_record_count.values())))
 
         return sync_record_count
 
@@ -252,7 +278,7 @@ class IntercomBaseTest(unittest.TestCase):
 
             # Verify all testable streams are selected
             selected = catalog_entry.get('annotated-schema').get('selected')
-            print("Validating selection on {}: {}".format(cat['stream_name'], selected))
+            LOGGER.info("Validating selection on {}: {}".format(cat['stream_name'], selected))
             if cat['stream_name'] not in expected_selected:
                 self.assertFalse(selected, msg="Stream selected, but not testable.")
                 continue # Skip remaining assertions if we aren't selecting this stream
@@ -262,7 +288,7 @@ class IntercomBaseTest(unittest.TestCase):
                 # Verify all fields within each selected stream are selected
                 for field, field_props in catalog_entry.get('annotated-schema').get('properties').items():
                     field_selected = field_props.get('selected')
-                    print("\tValidating selection on {}.{}: {}".format(
+                    LOGGER.info("\tValidating selection on {}.{}: {}".format(
                         cat['stream_name'], field, field_selected))
                     self.assertTrue(field_selected, msg="Field not selected.")
             else:
@@ -341,3 +367,8 @@ class IntercomBaseTest(unittest.TestCase):
     ##########################################################################
     ### Tap Specific Methods
     ##########################################################################
+
+    def dt_to_ts(self, dtime, format):
+        """Convert datetime with a format to timestamp"""
+        date_stripped = int(time.mktime(dt.strptime(dtime, format).timetuple()))
+        return date_stripped

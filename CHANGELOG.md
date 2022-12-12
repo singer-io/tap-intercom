@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.0.0
+ * Update primary keys for company_attributes and contacts stream [#56](https://github.com/singer-io/tap-intercom/pull/56)
+ * Update API version and related new fields [#53](https://github.com/singer-io/tap-intercom/pull/53)
+ * Use common API calls for parent's data for parent/child stream [#55](https://github.com/singer-io/tap-intercom/pull/55)
+ * Add addressable list fields [#58](https://github.com/singer-io/tap-intercom/pull/58)
+ * Add custom exception handling [#54](https://github.com/singer-io/tap-intercom/pull/54)
+ * Add missing tap tester and unit tests [#57](https://github.com/singer-io/tap-intercom/pull/57)
+
 ## 1 1.7
  * Change company stream from Full to Incremental [#44](https://github.com/singer-io/tap-intercom/pull/44)
  * Fix bookmark for conversation_parts stream [#45](https://github.com/singer-io/tap-intercom/pull/45)
