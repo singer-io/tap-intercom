@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import singer
-
+import sys
 from singer import utils
 from tap_intercom.discover import discover
 from tap_intercom.sync import sync
@@ -15,6 +15,7 @@ REQUIRED_CONFIG_KEYS = [
 ]
 
 def do_discover():
+    LOGGER.info(f"Version - {sys.version_info}")
 
     LOGGER.info('Starting discover')
     catalog = discover()
