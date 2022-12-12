@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
+import sys
 import singer
 from singer import utils
-import sys
 from tap_intercom.discover import discover
 from tap_intercom.sync import sync
 
