@@ -1,5 +1,6 @@
-from tap_tester import connections, runner, LOGGER
+from tap_tester import connections, menagerie, runner, LOGGER
 from base import IntercomBaseTest
+from datetime import datetime as dt
 
 
 class IntercomStartDateTest(IntercomBaseTest):
@@ -53,6 +54,7 @@ class IntercomStartDateTest(IntercomBaseTest):
         # Run initial sync
         record_count_by_stream_1 = self.run_and_verify_sync(conn_id_1)
         synced_records_1 = runner.get_records_from_target_output()
+        first_sync_bookmarks = menagerie.get_state(conn_id_1)
 
         ##########################################################################
         ### Update START DATE Between Syncs
@@ -87,6 +89,7 @@ class IntercomStartDateTest(IntercomBaseTest):
                 expected_primary_keys = self.expected_primary_keys()[stream]
                 expected_replication_keys = self.expected_replication_keys()[stream]
                 expected_metadata = self.expected_metadata()[stream]
+                expected_replication_method = self.expected_replication_method()[stream]
 
                 # Collect information for assertions from syncs 1 & 2 base on expected Primary key values
                 record_count_sync_1 = record_count_by_stream_1.get(stream, 0)
@@ -94,19 +97,38 @@ class IntercomStartDateTest(IntercomBaseTest):
                 primary_keys_list_1 = [tuple(message.get('data').get(expected_pk) for expected_pk in expected_primary_keys)
                                        for message in synced_records_1.get(stream, {}).get('messages', {})
                                        if message.get('action') == 'upsert']
-                primary_keys_list_2 = [tuple(message.get('data').get(expected_pk) for expected_pk in expected_primary_keys)
+
+                # Some streams are dynamic so we may get additional records in the second sync having greater replication key value
+                # than first bookmark, so we need to filter such records before validation
+                if expected_replication_method == self.INCREMENTAL:
+                    first_bookmark_key_value = first_sync_bookmarks.get('bookmarks', {stream: None}).get(
+                        stream).get(list(expected_replication_keys)[0], None)
+                    primary_keys_list_2 = [tuple(message.get('data').get(expected_pk) for expected_pk in expected_primary_keys)
                                        for message in synced_records_2.get(stream, {}).get('messages', {})
-                                       if message.get('action') == 'upsert']
+                                       if message.get('action') == 'upsert' 
+                                       and message.get('data').get(list(expected_replication_keys)[0]) <= first_bookmark_key_value]
+                else:
+                    primary_keys_list_2 = [tuple(message.get('data').get(expected_pk) for expected_pk in expected_primary_keys)
+                                        for message in synced_records_2.get(stream, {}).get('messages', {})
+                                        if message.get('action') == 'upsert']
+
                 primary_keys_sync_1 = set(primary_keys_list_1)
                 primary_keys_sync_2 = set(primary_keys_list_2)
 
-
                 if expected_metadata[self.OBEYS_START_DATE]:
+                    bookmark_keys_list_1 = [message.get('data').get(list(expected_replication_keys)[0])
+                                            for message in synced_records_1.get(stream).get('messages')
+                                            if message.get('action') == 'upsert']
 
-                    bookmark_keys_list_1 = [message.get('data').get(list(expected_replication_keys)[0]) for message in \
-                        synced_records_1.get(stream).get('messages') if message.get('action') == 'upsert']
-                    bookmark_keys_list_2 = [message.get('data').get(list(expected_replication_keys)[0]) for message in \
-                        synced_records_2.get(stream).get('messages') if message.get('action') == 'upsert']
+                    if expected_replication_method == self.INCREMENTAL:
+                        bookmark_keys_list_2 = [message.get('data').get(list(expected_replication_keys)[0])
+                                                for message in synced_records_2.get(stream).get('messages')
+                                                if message.get('action') == 'upsert'
+                                                and message.get('data').get(list(expected_replication_keys)[0]) <= first_bookmark_key_value]
+                    else:
+                        bookmark_keys_list_2 = [message.get('data').get(list(expected_replication_keys)[0])
+                                                for message in synced_records_2.get(stream).get('messages')
+                                                if message.get('action') == 'upsert']
 
                     bookmark_key_sync_1 = set(bookmark_keys_list_1)
                     bookmark_key_sync_2 = set(bookmark_keys_list_2)
@@ -125,8 +147,8 @@ class IntercomStartDateTest(IntercomBaseTest):
 
                     if stream != 'contacts': # skipping contacts as the data are dynamic
                         # Verify by a primary key that all records in the 2nd sync are included in the 1st sync since the 2nd sync has a later start date.
-                        self.assertTrue(primary_keys_sync_2.issubset(primary_keys_sync_1))
-
+                        self.assertTrue(primary_keys_sync_2.issubset(primary_keys_sync_1),
+                                        msg=f'{primary_keys_sync_2 - primary_keys_sync_1} is not in "expected_all_keys"')
 
                 else:
                     # Verify that the 2nd sync with a later start date replicates the same number of
