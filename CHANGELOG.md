@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.0.1
+  * Dependabot update [#62](https://github.com/singer-io/tap-intercom/pull/62)
+
 ## 2.0.0
  * Update primary keys for company_attributes and contacts stream [#56](https://github.com/singer-io/tap-intercom/pull/56)
  * Update API version and related new fields [#53](https://github.com/singer-io/tap-intercom/pull/53)
