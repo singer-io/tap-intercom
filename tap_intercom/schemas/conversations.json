@@ -874,7 +874,20 @@
         "null",
         "object"
       ],
-      "additionalProperties": true
+      "properties": {
+        "issue_type": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "priority": {
+          "type": [
+            "null",
+            "string"
+          ]
+        }
+      }
     }
   }
 }
