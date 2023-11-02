@@ -1,6 +1,6 @@
 import backoff
 import requests
-from requests.exceptions import ConnectionError, Timeout
+from requests.exceptions import ConnectionError, JSONDecodeError, Timeout
 from singer import metrics, utils
 import singer
 
@@ -268,7 +268,7 @@ class IntercomClient(object):
     #  https://developers.intercom.com/intercom-api-reference/reference#rate-limiting
     @backoff.on_exception(backoff.expo, Timeout, max_tries=5, factor=2) # Backoff for request timeout
     @backoff.on_exception(backoff.expo,
-                          (Server5xxError, ConnectionError, IntercomRateLimitError, IntercomScrollExistsError),
+                          (Server5xxError, ConnectionError, IntercomRateLimitError, IntercomScrollExistsError, JSONDecodeError),
                           max_tries=7,
                           factor=3)
     @utils.ratelimit(1000, 60)
