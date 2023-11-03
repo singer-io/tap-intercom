@@ -27,6 +27,10 @@ class IntercomBadRequestError(IntercomError):
     pass
 
 
+class IntercomBadResponseError(IntercomError):
+    pass
+
+
 class IntercomScrollExistsError(IntercomError):
     pass
 
@@ -92,9 +96,6 @@ class IntercomServiceUnavailableError(Server5xxError):
 
 
 class IntercomGatewayTimeoutError(Server5xxError):
-    pass
-
-class IntercomBadResponseError(Server5xxError):
     pass
 
 
@@ -272,7 +273,7 @@ class IntercomClient(object):
     #  https://developers.intercom.com/intercom-api-reference/reference#rate-limiting
     @backoff.on_exception(backoff.expo, Timeout, max_tries=5, factor=2) # Backoff for request timeout
     @backoff.on_exception(backoff.expo,
-                          (Server5xxError, ConnectionError, IntercomBadResponseError, IntercomRateLimitError, IntercomScrollExistsError),
+                          (Server5xxError, ConnectionError, IntercomBadResponseError,IntercomRateLimitError, IntercomScrollExistsError),
                           max_tries=7,
                           factor=3)
     @utils.ratelimit(1000, 60)
