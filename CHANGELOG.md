@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.0.2
+ * Retry on responses with no JSON [#66](https://github.com/singer-io/tap-intercom/pull/66)
+
 ## 2.0.1
  * Fix schema for Conversations custom_attributes field [#63](https://github.com/singer-io/tap-intercom/pull/63)
 
