@@ -273,7 +273,7 @@ class IntercomClient(object):
     #  https://developers.intercom.com/intercom-api-reference/reference#rate-limiting
     @backoff.on_exception(backoff.expo, Timeout, max_tries=5, factor=2) # Backoff for request timeout
     @backoff.on_exception(backoff.expo,
-                          (Server5xxError, ConnectionError, IntercomBadResponseError,IntercomRateLimitError, IntercomScrollExistsError),
+                          (Server5xxError, ConnectionError, IntercomBadResponseError, IntercomRateLimitError, IntercomScrollExistsError),
                           max_tries=7,
                           factor=3)
     @utils.ratelimit(1000, 60)
@@ -314,8 +314,8 @@ class IntercomClient(object):
         # Sometimes a 200 status code is returned with no content, which breaks JSON decoding.
         try:
             return response.json()
-        except JSONDecodeError as e:
-            raise IntercomBadResponseError from e
+        except JSONDecodeError as err:
+            raise IntercomBadResponseError from err
 
     def get(self, path, **kwargs):
         return self.request('GET', path=path, **kwargs)
