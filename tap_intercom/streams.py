@@ -228,6 +228,10 @@ class IncrementalStream(BaseStream):
                     counter.increment()
                     max_datetime = max(record_datetime, max_datetime)
 
+                # Sync child stream, if the child is selected and if we have records greater than the child stream bookmark
+                if has_child and is_child_selected and (record[self.replication_key] >= child_bookmark_ts):
+                    state = child_stream_obj.sync_substream(record.get('id'), child_schema, child_metadata, record[self.replication_key], state)
+
                 if self.to_write_intermediate_bookmark and record_counter == MAX_PAGE_SIZE:
                     # Write bookmark and state after every page of records
                     state = singer.write_bookmark(state,
@@ -237,10 +241,6 @@ class IncrementalStream(BaseStream):
                     singer.write_state(state)
                     # Reset counter
                     record_counter = 0
-
-                # Sync child stream, if the child is selected and if we have records greater than the child stream bookmark
-                if has_child and is_child_selected and (record[self.replication_key] >= child_bookmark_ts):
-                    state = child_stream_obj.sync_substream(record.get('id'), child_schema, child_metadata, record[self.replication_key], state)
 
             bookmark_date = singer.utils.strftime(max_datetime)
             LOGGER.info("FINISHED Syncing: {}, total_records: {}.".format(self.tap_stream_id, counter.value))
@@ -507,6 +507,7 @@ class Conversations(IncrementalStream):
     data_key = 'conversations'
     per_page = MAX_PAGE_SIZE
     child = 'conversation_parts'
+    to_write_intermediate_bookmark = True
 
     def get_records(self, bookmark_datetime=None, is_parent=False, stream_metadata=None) -> Iterator[list]:
         paging = True
