@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.1.0
+ * Run on python 3.11 [#69](https://github.com/singer-io/tap-intercom/pull/69)
+
 ## 2.0.2
  * Retry on responses with no JSON [#66](https://github.com/singer-io/tap-intercom/pull/66)
 
