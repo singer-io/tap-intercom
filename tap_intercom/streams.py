@@ -575,7 +575,7 @@ class Conversations(IncrementalStream):
         state = singer.write_bookmark(state,
                                       self.tap_stream_id,
                                       "last_sync_started_at",
-                                      bookmark_value)
+                                      self.last_sync_started_at)
         singer.write_state(state)
 
     def get_records(self, bookmark_datetime=None, is_parent=False, stream_metadata=None) -> Iterator[list]:
