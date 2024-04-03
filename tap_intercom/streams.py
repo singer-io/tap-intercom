@@ -138,6 +138,7 @@ class IncrementalStream(BaseStream):
     to_write_intermediate_bookmark = False
     last_processed = None
     last_sync_started_at = None
+    skipped_parent_ids = []
 
     def set_last_processed(self, state):
         self.last_processed = None
@@ -154,7 +155,7 @@ class IncrementalStream(BaseStream):
                                      self.replication_key,
                                      bookmark_value)
 
-    def write_intermediate_bookmark(self, state, record, bookmark_value):
+    def write_intermediate_bookmark(self, state, last_processed, bookmark_value):
         if self.to_write_intermediate_bookmark:
             # Write bookmark and state after every page of records
             state = singer.write_bookmark(state,
@@ -238,8 +239,6 @@ class IncrementalStream(BaseStream):
         with metrics.record_counter(self.tap_stream_id) as counter:
             for record in self.get_records(sync_start_date, stream_metadata=stream_metadata):
                 # In case of interrupted sync, skip records last synced conversations
-                if self.skip_records(record):
-                    continue
 
                 transform_times(record, schema_datetimes)
 
@@ -262,21 +261,39 @@ class IncrementalStream(BaseStream):
 
                 # Sync child stream, if the child is selected and if we have records greater than the child stream bookmark
                 if has_child and is_child_selected and (record[self.replication_key] >= child_bookmark_ts):
+                    # Long running jobs may starve the child stream extraction so skip the parent ids synced in last sync
+                    # Store the parent ids so that later we can resync child records of skipped parent ids
+                    if self.skip_records(record):
+                        self.skipped_parent_ids.append((record.get('id'), record[self.replication_key]))
+                        continue
                     state = child_stream_obj.sync_substream(record.get('id'), child_schema, child_metadata, record[self.replication_key], state)
 
                 if record_counter == MAX_PAGE_SIZE:
-                    self.write_intermediate_bookmark(state, record, max_datetime)
+                    self.write_intermediate_bookmark(state, record.get("id"), max_datetime)
                     # Reset counter
                     record_counter = 0
+
+            # Alternate implementation
+            # self.write_intermediate_bookmark(state, record.get("id"), max_datetime)
+            # # Sync the child records of skipped parent ids
+            # if self.skipped_parent_ids:
+            #     LOGGER.info("FINISHED: Syncing child records for interrupted parent ids in last sync")
+            #     LOGGER.info("STARTING: Syncing child records for skipped parest ids in this sync")
+
+            # while self.skipped_parent_ids:
+            #     parent_id, record_datetime = self.skipped_parent_ids.pop(0)
+            #     state = child_stream_obj.sync_substream(parent_id, child_schema, child_metadata, record_datetime, state)
+            #     if record_counter == MAX_PAGE_SIZE:
+            #         max_datetime = max(record_datetime, max_datetime)
+            #         self.write_intermediate_bookmark(state, parent_id, max_datetime)
+            #         # Reset counter
+            #         record_counter = 0
 
             bookmark_date = singer.utils.strftime(max_datetime)
             LOGGER.info("FINISHED Syncing: {}, total_records: {}.".format(self.tap_stream_id, counter.value))
 
         LOGGER.info("Stream: {}, writing final bookmark".format(self.tap_stream_id))
-        state = singer.write_bookmark(state,
-                                      self.tap_stream_id,
-                                      self.replication_key,
-                                      bookmark_date)
+        self.write_bookmark(state, bookmark_date)
         return state
 
 
@@ -537,39 +554,40 @@ class Conversations(IncrementalStream):
 
     def set_last_processed(self, state):
         self.last_processed = singer.get_bookmark(
-            state, self.tap_stream_id, self.key_properties[0])
+            state, self.tap_stream_id, "last_processed")
 
     def set_last_sync_started_at(self, state):
         last_sync_started_at = singer.get_bookmark(
             state, self.tap_stream_id, "last_sync_started_at")
-        self.last_sync_started_at = last_sync_started_at or singer.utils.strftime(
-            singer.utils.now())
+        self.last_sync_started_at = last_sync_started_at or singer.utils.strftime(singer.utils.now())
 
     def skip_records(self, record):
         # If last processed id exists then check if current record id is less than last processed id
-        return self.last_processed and record[self.key_properties[0]] < self.last_processed
+        return self.last_processed and record.get("id") <= self.last_processed
 
     def write_bookmark(self, state, bookmark_value):
-        # Set last successful sync start time as new bookmark
-        bookmark_value = singer.get_bookmark(state,
-                                             self.tap_stream_id,
-                                             "last_sync_started_at")
+        # Set last successful sync start time as new bookmark and delete intermitiate bookmarks
+        if "last_sync_started_at" in state["bookmarks"][self.tap_stream_id]:
+            bookmark_value = singer.get_bookmark(state,
+                                                 self.tap_stream_id,
+                                                 "last_sync_started_at")
 
-        # Delete intermitiate bookmarks
-        del state["last_processed"]
-        del state["last_sync_started_at"]
+            del state["bookmarks"][self.tap_stream_id]["last_sync_started_at"]
+        
+        if "last_processed" in state["bookmarks"][self.tap_stream_id]:
+            del state["bookmarks"][self.tap_stream_id]["last_processed"]
 
         return singer.write_bookmark(state,
                                      self.tap_stream_id,
                                      self.replication_key,
                                      bookmark_value)
 
-    def write_intermediate_bookmark(self, state, record, bookmark_value):
+    def write_intermediate_bookmark(self, state, last_processed, bookmark_value):
         # In scenarios where sync is interrupted, we should resume from the last id processed
         state = singer.write_bookmark(state,
                                       self.tap_stream_id,
                                       "last_processed",
-                                      record[self.key_properties[0]])
+                                      last_processed)
 
         # This should be set as new bookmark once all conversation records are synced
         state = singer.write_bookmark(state,
