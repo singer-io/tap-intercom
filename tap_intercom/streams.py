@@ -273,22 +273,6 @@ class IncrementalStream(BaseStream):
                     # Reset counter
                     record_counter = 0
 
-            # Alternate implementation
-            # self.write_intermediate_bookmark(state, record.get("id"), max_datetime)
-            # # Sync the child records of skipped parent ids
-            # if self.skipped_parent_ids:
-            #     LOGGER.info("FINISHED: Syncing child records for interrupted parent ids in last sync")
-            #     LOGGER.info("STARTING: Syncing child records for skipped parest ids in this sync")
-
-            # while self.skipped_parent_ids:
-            #     parent_id, record_datetime = self.skipped_parent_ids.pop(0)
-            #     state = child_stream_obj.sync_substream(parent_id, child_schema, child_metadata, record_datetime, state)
-            #     if record_counter == MAX_PAGE_SIZE:
-            #         max_datetime = max(record_datetime, max_datetime)
-            #         self.write_intermediate_bookmark(state, parent_id, max_datetime)
-            #         # Reset counter
-            #         record_counter = 0
-
             bookmark_date = singer.utils.strftime(max_datetime)
             LOGGER.info("FINISHED Syncing: {}, total_records: {}.".format(self.tap_stream_id, counter.value))
 
@@ -573,7 +557,7 @@ class Conversations(IncrementalStream):
                                                  "last_sync_started_at")
 
             del state["bookmarks"][self.tap_stream_id]["last_sync_started_at"]
-        
+
         if "last_processed" in state["bookmarks"][self.tap_stream_id]:
             del state["bookmarks"][self.tap_stream_id]["last_processed"]
 
