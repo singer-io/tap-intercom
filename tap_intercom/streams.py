@@ -551,14 +551,14 @@ class Conversations(IncrementalStream):
 
     def write_bookmark(self, state, bookmark_value):
         # Set last successful sync start time as new bookmark and delete intermitiate bookmarks
-        if "last_sync_started_at" in state["bookmarks"][self.tap_stream_id]:
+        if "last_sync_started_at" in state.get("bookmarks", {}).get(self.tap_stream_id, {}):
             bookmark_value = singer.get_bookmark(state,
                                                  self.tap_stream_id,
                                                  "last_sync_started_at")
 
             del state["bookmarks"][self.tap_stream_id]["last_sync_started_at"]
 
-        if "last_processed" in state["bookmarks"][self.tap_stream_id]:
+        if "last_processed" in state.get("bookmarks", {}).get(self.tap_stream_id, {}):
             del state["bookmarks"][self.tap_stream_id]["last_processed"]
 
         return singer.write_bookmark(state,
