@@ -146,6 +146,9 @@ class IncrementalStream(BaseStream):
     def get_last_sync_started_at(self, state):
         self.last_sync_started_at = None
 
+    def set_last_sync_started_at(self, state):
+        pass
+
     def skip_records(self, record):
         return False
 
