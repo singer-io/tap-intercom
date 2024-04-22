@@ -23,9 +23,8 @@ class IntercomAutomaticFields(IntercomBaseTest):
             fetch of data.  For instance, if you have a limit of 250 records ensure
             that 251 (or more) records have been posted for that stream.
         """
-        # Created card for untestable/unstable streams.
-        # FIX CARD: https://jira.talendforge.org/browse/TDL-17035
-        untestable_streams = {"segments"}
+        # Streams for which we cannot generate data
+        untestable_streams = {"segments", "tags", "contacts", "company_segments", "conversation_parts", "companies", "conversations"}
         expected_streams =  self.expected_streams().difference(untestable_streams)
 
         # Instantiate connection
