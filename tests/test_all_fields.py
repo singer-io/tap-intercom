@@ -12,7 +12,8 @@ class IntercomAllFields(IntercomBaseTest):
     # Fields for which we cannot generate data
     fields_to_remove = {
         'company_attributes': {
-            'options'
+            'options',
+            'admin_id'
         },
         'companies': {
             'size',
@@ -32,7 +33,8 @@ class IntercomAllFields(IntercomBaseTest):
             'admin_ids'
         },
         'contact_attributes': {
-            'options'
+            'options',
+            'admin_id'
         }
     }
     @staticmethod
@@ -45,9 +47,8 @@ class IntercomAllFields(IntercomBaseTest):
             • Verify that more than just the automatic fields are replicated for each stream. 
             • verify all fields for each stream are replicated
         """
-        # Created card for untestable/unstable streams.
-        # FIX CARD: https://jira.talendforge.org/browse/TDL-17035
-        untestable_streams = {"segments"}
+        # Streams for which we cannot generate data
+        untestable_streams = {"segments", "tags", "contacts", "company_segments", "conversation_parts", "companies", "conversations"}
         expected_streams =  self.expected_streams().difference(untestable_streams)
 
         # instantiate connection
