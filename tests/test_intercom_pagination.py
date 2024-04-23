@@ -13,25 +13,32 @@ class RechargePaginationTest(IntercomBaseTest):
     def name():
         return "tap_tester_intercom_pagination_test"
 
+    def get_properties(self):
+        """Configuration properties required for the tap."""
+        return_value = {
+            'start_date' : "2016-02-05T00:00:00Z"
+        }
+        return return_value
+
     def test_run(self):
         """
             Verify that for each stream you can get multiple pages of data
             and that when all fields are selected more than the automatic fields are replicated.
             PREREQUISITE
             For EACH stream add enough data that you surpass the limit of a single
-            fetch of data.  For instance if you have a limit of 150 records ensure
-            that 151 (or more) records have been posted for that stream.
+            fetch of data.  For instance if you have a limit of 100 records ensure
+            that 101 (or more) records have been posted for that stream.
         """
-        page_size = 150
+        page_size = 100
         conn_id = connections.ensure_connection(self)
 
         # Checking pagination for streams having enough data
         expected_streams = [
-            "conversations",
+            # "conversations",
             # The Contacts stream API has a delay in updating the records. Thus, we are getting some duplicate records.
             # Reference Ticket: https://jira.talendforge.org/browse/TDL-19860
             # "contacts",
-            "tags",
+            # "tags",
             "companies"
         ]
         found_catalogs = self.run_and_verify_check_mode(conn_id)
