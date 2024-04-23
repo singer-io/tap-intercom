@@ -68,10 +68,9 @@ class IntercomBookmarks(IntercomBaseTest):
                 different values for the replication key
         """
 
-        # Created card for untestable/unstable streams.
-        # FIX CARD: https://jira.talendforge.org/browse/TDL-17035
+        # Streams for which we cannot generate data
         # The stream: "conversation_parts" is child stream and bookmark is being written of parent stream. Thus, skipping the stream
-        untestable_streams = {"companies", "segments", "company_segments", "conversation_parts"}
+        untestable_streams = {"companies", "segments", "company_segments", "conversation_parts", "tags", "conversations"}
         # Contacts stream does 3 API calls for addressable list fields, [notes, companies, tags]
         # This cause the build to run more than 3 hrs, thus skipping this stream
         streams_to_skip = {"contacts"}
@@ -97,6 +96,7 @@ class IntercomBookmarks(IntercomBaseTest):
         first_sync_record_count = self.run_and_verify_sync(conn_id)
         first_sync_records = runner.get_records_from_target_output()
         first_sync_bookmarks = menagerie.get_state(conn_id)
+        first_sync_bookmarks["bookmarks"] = first_sync_bookmarks.get("bookmarks", {})
 
         ##########################################################################
         ### Update State Between Syncs
