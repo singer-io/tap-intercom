@@ -12,6 +12,13 @@ class IntercomStartDateTest(IntercomBaseTest):
     def name():
         return "tap_tester_intercom_start_date_test"
 
+    def get_properties(self, original: bool = True):
+        """Configuration properties required for the tap."""
+        return_value = {
+            'start_date' : "2016-01-01T00:00:00Z"
+        }
+        return return_value
+
     def test_run(self):
         """
             Test that the start_date configuration is respected
@@ -24,7 +31,7 @@ class IntercomStartDateTest(IntercomBaseTest):
             • verify by primary key values, that all records in the 1st sync are included in the 2nd sync.
         """
         # Streams for which we cannot generate data
-        untestable_streams = {"segments", "company_segments", "conversations", "companies", "conversation_parts", "contacts"}
+        untestable_streams = {"segments", "company_segments", "conversations", "companies", "conversation_parts"}
         expected_streams =  self.expected_streams().difference(untestable_streams)
 
         self.start_date_1 = self.get_properties().get('start_date')

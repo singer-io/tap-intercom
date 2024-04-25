@@ -11,6 +11,13 @@ class IntercomBookmarks(IntercomBaseTest):
     def name():
         return "tap_tester_intercom_bookmarks"
 
+    def get_properties(self, original: bool = True):
+        """Configuration properties required for the tap."""
+        return_value = {
+            'start_date' : "2017-09-01T00:00:00Z"
+        }
+        return return_value
+
     def calculated_states_by_stream(self, current_state):
         """
             Look at the bookmarks from a previous sync and set a new bookmark
@@ -71,10 +78,7 @@ class IntercomBookmarks(IntercomBaseTest):
         # Streams for which we cannot generate data
         # The stream: "conversation_parts" is child stream and bookmark is being written of parent stream. Thus, skipping the stream
         untestable_streams = {"companies", "segments", "company_segments", "conversation_parts", "tags", "conversations"}
-        # Contacts stream does 3 API calls for addressable list fields, [notes, companies, tags]
-        # This cause the build to run more than 3 hrs, thus skipping this stream
-        streams_to_skip = {"contacts"}
-        expected_streams =  self.expected_streams() - untestable_streams - streams_to_skip
+        expected_streams =  self.expected_streams() - untestable_streams
     
         expected_replication_keys = self.expected_replication_keys()
         expected_replication_methods = self.expected_replication_method()
