@@ -13,6 +13,13 @@ class IntercomAutomaticFields(IntercomBaseTest):
     def name():
         return "tap_tester_intercom_automatic_fields"
 
+    def get_properties(self):
+        """Configuration properties required for the tap."""
+        return_value = {
+            'start_date' : "2016-01-01T00:00:00Z"
+        }
+        return return_value
+
     def test_run(self):
         """
             Verify that for each stream you can get multiple pages of data
@@ -24,7 +31,7 @@ class IntercomAutomaticFields(IntercomBaseTest):
             that 251 (or more) records have been posted for that stream.
         """
         # Streams for which we cannot generate data
-        untestable_streams = {"segments", "tags", "contacts", "company_segments", "conversation_parts", "companies", "conversations"}
+        untestable_streams = {"conversation_parts", "conversations", "segments", "tags", "company_segments"}
         expected_streams =  self.expected_streams().difference(untestable_streams)
 
         # Instantiate connection

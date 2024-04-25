@@ -16,7 +16,7 @@ class RechargePaginationTest(IntercomBaseTest):
     def get_properties(self):
         """Configuration properties required for the tap."""
         return_value = {
-            'start_date' : "2016-02-05T00:00:00Z"
+            'start_date' : "2016-01-01T00:00:00Z"
         }
         return return_value
 
@@ -29,7 +29,7 @@ class RechargePaginationTest(IntercomBaseTest):
             fetch of data.  For instance if you have a limit of 100 records ensure
             that 101 (or more) records have been posted for that stream.
         """
-        page_size = 100
+        page_size = 50
         conn_id = connections.ensure_connection(self)
 
         # Checking pagination for streams having enough data
@@ -37,7 +37,7 @@ class RechargePaginationTest(IntercomBaseTest):
             # "conversations",
             # The Contacts stream API has a delay in updating the records. Thus, we are getting some duplicate records.
             # Reference Ticket: https://jira.talendforge.org/browse/TDL-19860
-            # "contacts",
+            "contacts",
             # "tags",
             "companies"
         ]

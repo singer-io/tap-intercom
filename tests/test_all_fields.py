@@ -19,7 +19,8 @@ class IntercomAllFields(IntercomBaseTest):
             'size',
             'website',
             'industry',
-            'segments'
+            'segments',
+            'tags'
         },
         'conversations': {
             'user',
@@ -35,8 +36,19 @@ class IntercomAllFields(IntercomBaseTest):
         'contact_attributes': {
             'options',
             'admin_id'
+        },
+        'contacts': {
+            'tags'
         }
     }
+
+    def get_properties(self):
+        """Configuration properties required for the tap."""
+        return_value = {
+            'start_date' : "2016-01-01T00:00:00Z"
+        }
+        return return_value
+
     @staticmethod
     def name():
         return "tap_tester_intercom_all_fields"
@@ -48,7 +60,7 @@ class IntercomAllFields(IntercomBaseTest):
             • verify all fields for each stream are replicated
         """
         # Streams for which we cannot generate data
-        untestable_streams = {"segments", "tags", "contacts", "company_segments", "conversation_parts", "companies", "conversations"}
+        untestable_streams = {"tags", "segments" ,"conversation_parts", "conversations", "company_segments"}
         expected_streams =  self.expected_streams().difference(untestable_streams)
 
         # instantiate connection

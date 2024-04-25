@@ -10,7 +10,9 @@ class IntercomParentChildSync(IntercomBaseTest):
 
     @unittest.expectedFailure
     def test_run(self):
+        # Once suficiennt data is generated for the test, remove below line
         self.assertFalse(True, "X-Failing this test due to insufficient test data.")
+
         # Run with parent stream as earlier bookmark
         self.run_test(
             child_bookmark=(dt.now()).strftime(self.START_DATE_FORMAT),
