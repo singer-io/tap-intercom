@@ -30,7 +30,8 @@ class IntercomStartDateTest(IntercomBaseTest):
             is greater than or equal to the start date
             • verify by primary key values, that all records in the 1st sync are included in the 2nd sync.
         """
-        # Streams for which we cannot generate data
+        # Created card for untestable/unstable streams.
+        # FIX CARD: https://jira.talendforge.org/browse/TDL-17035
         untestable_streams = {"segments", "company_segments", "conversations", "companies", "conversation_parts"}
         expected_streams =  self.expected_streams().difference(untestable_streams)
 

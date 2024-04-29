@@ -59,7 +59,8 @@ class IntercomAllFields(IntercomBaseTest):
             • Verify that more than just the automatic fields are replicated for each stream. 
             • verify all fields for each stream are replicated
         """
-        # Streams for which we cannot generate data
+        # Created card for untestable/unstable streams.
+        # FIX CARD: https://jira.talendforge.org/browse/TDL-17035
         untestable_streams = {"tags", "segments" ,"conversation_parts", "conversations", "company_segments"}
         expected_streams =  self.expected_streams().difference(untestable_streams)
 

@@ -75,7 +75,8 @@ class IntercomBookmarks(IntercomBaseTest):
                 different values for the replication key
         """
 
-        # Streams for which we cannot generate data
+        # Created card for untestable/unstable streams.
+        # FIX CARD: https://jira.talendforge.org/browse/TDL-17035
         # The stream: "conversation_parts" is child stream and bookmark is being written of parent stream. Thus, skipping the stream
         untestable_streams = {"companies", "segments", "company_segments", "conversation_parts", "tags", "conversations"}
         expected_streams =  self.expected_streams() - untestable_streams
