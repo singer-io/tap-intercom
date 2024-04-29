@@ -11,12 +11,17 @@ class IntercomBookmarks(IntercomBaseTest):
     def name():
         return "tap_tester_intercom_bookmarks"
 
-    def get_properties(self, original: bool = True):
+    def first_start_date(self, original: bool = True):
         """Configuration properties required for the tap."""
-        return_value = {
-            'start_date' : "2017-09-01T00:00:00Z"
+        return {
+            'start_date' : "2015-06-15T00:00:00Z"
         }
-        return return_value
+
+    def second_start_date(self, original: bool = True):
+        """Configuration properties required for the tap."""
+        return {
+            'start_date' : "2016-01-01T00:00:00Z"
+        }
 
     def calculated_states_by_stream(self, current_state):
         """
@@ -58,6 +63,22 @@ class IntercomBookmarks(IntercomBaseTest):
         return stream_to_calculated_state
 
     def test_run(self):
+        # Created card for untestable/unstable streams.
+        # FIX CARD: https://jira.talendforge.org/browse/TDL-17035
+        # The stream: "conversation_parts" is child stream and bookmark is being written of parent stream. Thus, skipping the stream
+        untestable_streams = {"segments", "company_segments", "conversation_parts", "tags", "conversations", "companies"}
+        expected_streams_1 = self.expected_streams() - untestable_streams
+        self.get_properties = self.first_start_date
+        self.start_date = self.get_properties().get('start_date')
+
+        self.run_test(expected_streams_1, self.start_date)
+
+        self.get_properties = self.second_start_date
+        self.start_date = self.get_properties().get('start_date')
+        expected_streams_2 = {"companies"}
+        self.run_test(expected_streams_2, self.start_date, True)
+
+    def run_test(self, expected_streams, start_date, stream_assert=False):
         """
             Verify that:
                 For each stream, you can do a sync that records bookmarks.
@@ -75,12 +96,6 @@ class IntercomBookmarks(IntercomBaseTest):
                 different values for the replication key
         """
 
-        # Created card for untestable/unstable streams.
-        # FIX CARD: https://jira.talendforge.org/browse/TDL-17035
-        # The stream: "conversation_parts" is child stream and bookmark is being written of parent stream. Thus, skipping the stream
-        untestable_streams = {"companies", "segments", "company_segments", "conversation_parts", "tags", "conversations"}
-        expected_streams =  self.expected_streams() - untestable_streams
-    
         expected_replication_keys = self.expected_replication_keys()
         expected_replication_methods = self.expected_replication_method()
 
@@ -101,7 +116,6 @@ class IntercomBookmarks(IntercomBaseTest):
         first_sync_record_count = self.run_and_verify_sync(conn_id)
         first_sync_records = runner.get_records_from_target_output()
         first_sync_bookmarks = menagerie.get_state(conn_id)
-        first_sync_bookmarks["bookmarks"] = first_sync_bookmarks.get("bookmarks", {})
 
         ##########################################################################
         ### Update State Between Syncs
@@ -125,7 +139,6 @@ class IntercomBookmarks(IntercomBaseTest):
         ### Test By Stream
         ##########################################################################
 
-        start_date = self.get_properties().get('start_date')
         for stream in expected_streams:
             with self.subTest(stream=stream):
 
@@ -195,7 +208,10 @@ class IntercomBookmarks(IntercomBaseTest):
                             msg="Second sync records do not respect the previous bookmark.")
 
                     # Verify the number of records in the 2nd sync is less then the first
-                    self.assertLess(second_sync_count, first_sync_count)
+                    if stream_assert:
+                        self.assertLessEqual(second_sync_count, first_sync_count)
+                    else:
+                        self.assertLess(second_sync_count, first_sync_count)
 
                 elif expected_replication_method == self.FULL_TABLE:
 
