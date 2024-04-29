@@ -35,8 +35,6 @@ class RechargePaginationTest(IntercomBaseTest):
         # Checking pagination for streams having enough data
         expected_streams = [
             # "conversations",
-            # The Contacts stream API has a delay in updating the records. Thus, we are getting some duplicate records.
-            # Reference Ticket: https://jira.talendforge.org/browse/TDL-19860
             "contacts",
             # "tags",
             "companies"
