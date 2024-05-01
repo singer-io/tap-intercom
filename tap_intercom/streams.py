@@ -588,18 +588,37 @@ class Conversations(IncrementalStream):
                 'per_page': self.per_page
             },
             'query': {
-                'operator': 'OR',
-                'value': [{
-                    'field': self.replication_key,
-                    'operator': '>',
-                    'value': self.dt_to_epoch_seconds(bookmark_datetime)
+                'operator': 'AND',
+                'value': [
+                    {
+                        'operator': 'OR',
+                        'value': [
+                            {
+                                'field': 'id',
+                                'operator': '>',
+                                'value': self.last_processed or ""
+                            },
+                            {
+                                'field': 'id',
+                                'operator': '=',
+                                'value': self.last_processed or ""
+                            }]
                     },
                     {
-                    'field': self.replication_key,
-                    'operator': '=',
-                    'value': self.dt_to_epoch_seconds(bookmark_datetime)
+                        'operator': 'OR',
+                        'value': [
+                            {
+                                'field': self.replication_key,
+                                'operator': '>',
+                                'value': self.dt_to_epoch_seconds(bookmark_datetime)
+                            },
+                            {
+                                'field': self.replication_key,
+                                'operator': '=',
+                                'value': self.dt_to_epoch_seconds(bookmark_datetime)
+                            }]
                     }]
-                },
+            },
             "sort": {
                 "field": "id",
                 "order": "ascending"
