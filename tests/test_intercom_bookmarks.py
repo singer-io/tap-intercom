@@ -65,14 +65,15 @@ class IntercomBookmarks(IntercomBaseTest):
     def test_run(self):
         # Created card for untestable/unstable streams.
         # FIX CARD: https://jira.talendforge.org/browse/TDL-17035
-        # The stream: "conversation_parts" is child stream and bookmark is being written of parent stream. Thus, skipping the stream
+        # The "conversation_parts" stream is a sub-stream that relies on the bookmark of its parent stream, "conversations".
+        # Hence, the stream is skipped.
         untestable_streams = {"segments", "company_segments", "conversation_parts", "tags", "conversations", "companies"}
         expected_streams_1 = self.expected_streams() - untestable_streams
         self.get_properties = self.first_start_date
         self.start_date = self.get_properties().get('start_date')
-
         self.run_test(expected_streams_1, self.start_date)
 
+        # Setting a different start date to test "companies" stream.
         self.get_properties = self.second_start_date
         self.start_date = self.get_properties().get('start_date')
         expected_streams_2 = {"companies"}
