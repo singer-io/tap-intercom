@@ -3,7 +3,6 @@
     "null",
     "object"
   ],
-  "additionalProperties": false,
   "properties": {
     "type": {
       "type": [
@@ -434,66 +433,32 @@
     "companies": {
       "type": [
         "null",
-        "object"
+        "array"
       ],
-      "additionalProperties": false,
-      "properties": {
-        "type": {
-          "type": [
-            "null",
-            "string"
-          ]
-        },
-        "data": {
-          "type": [
-            "null",
-            "array"
-          ],
-          "items": {
+      "items": {
+        "type": [
+          "null",
+          "object"
+        ],
+        "properties": {
+          "id": {
             "type": [
               "null",
-              "object"
-            ],
-            "additionalProperties": false,
-            "properties": {
-              "type": {
-                "type": [
-                  "null",
-                  "string"
-                ]
-              },
-              "id": {
-                "type": [
-                  "null",
-                  "string"
-                ]
-              },
-              "url": {
-                "type": [
-                  "null",
-                  "string"
-                ]
-              }
-            }
+              "string"
+            ]
+          },
+          "type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "url": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
-        },
-        "url": {
-          "type": [
-            "null",
-            "string"
-          ]
-        },
-        "total_count": {
-          "type": [
-            "null",
-            "integer"
-          ]
-        },
-        "has_more": {
-          "type": [
-            "null",
-            "boolean"
-          ]
         }
       }
     }

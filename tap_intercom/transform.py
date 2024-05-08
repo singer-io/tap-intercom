@@ -57,7 +57,7 @@ def transform_json(this_json, stream_name, data_key):
         new_json = denested_json
     elif stream_name == 'contacts':
         # De-nest the addressable list fields in 'Contacts' stream
-        adressable_list_nodes = ['tags']
+        adressable_list_nodes = ['companies', 'tags']
         denested_adressable_list_json = denest_list_nodes(new_json, data_key, adressable_list_nodes, True)
         new_json = denested_adressable_list_json
     if data_key in new_json:
