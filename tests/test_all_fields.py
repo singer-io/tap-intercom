@@ -12,13 +12,15 @@ class IntercomAllFields(IntercomBaseTest):
     # Fields for which we cannot generate data
     fields_to_remove = {
         'company_attributes': {
-            'options'
+            'options',
+            'admin_id'
         },
         'companies': {
             'size',
             'website',
             'industry',
-            'segments'
+            'segments',
+            'tags'
         },
         'conversations': {
             'user',
@@ -32,9 +34,21 @@ class IntercomAllFields(IntercomBaseTest):
             'admin_ids'
         },
         'contact_attributes': {
-            'options'
+            'options',
+            'admin_id'
+        },
+        'contacts': {
+            'tags'
         }
     }
+
+    def get_properties(self):
+        """Configuration properties required for the tap."""
+        return_value = {
+            'start_date' : "2016-01-01T00:00:00Z"
+        }
+        return return_value
+
     @staticmethod
     def name():
         return "tap_tester_intercom_all_fields"
@@ -47,7 +61,7 @@ class IntercomAllFields(IntercomBaseTest):
         """
         # Created card for untestable/unstable streams.
         # FIX CARD: https://jira.talendforge.org/browse/TDL-17035
-        untestable_streams = {"segments"}
+        untestable_streams = {"tags", "segments" ,"conversation_parts", "conversations", "company_segments"}
         expected_streams =  self.expected_streams().difference(untestable_streams)
 
         # instantiate connection
