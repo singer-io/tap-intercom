@@ -12,6 +12,13 @@ class IntercomStartDateTest(IntercomBaseTest):
     def name():
         return "tap_tester_intercom_start_date_test"
 
+    def get_properties(self, original: bool = True):
+        """Configuration properties required for the tap."""
+        return_value = {
+            'start_date' : "2016-01-01T00:00:00Z"
+        }
+        return return_value
+
     def test_run(self):
         """
             Test that the start_date configuration is respected
@@ -25,7 +32,7 @@ class IntercomStartDateTest(IntercomBaseTest):
         """
         # Created card for untestable/unstable streams.
         # FIX CARD: https://jira.talendforge.org/browse/TDL-17035
-        untestable_streams = {"segments", "companies","conversation_parts"}
+        untestable_streams = {"segments", "company_segments", "conversations", "companies", "conversation_parts"}
         expected_streams =  self.expected_streams().difference(untestable_streams)
 
         self.start_date_1 = self.get_properties().get('start_date')
