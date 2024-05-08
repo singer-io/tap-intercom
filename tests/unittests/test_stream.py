@@ -83,7 +83,7 @@ class TestData(unittest.TestCase):
         test_stream = Contacts(self.base_client, None, ['contacts'])
 
         test_data = list(test_stream.get_records(stream_metadata={}))
-        expected_data = [{'key': 'value', 'companies': {}}]
+        expected_data = [{'key': 'value'}]
         
         self.assertEqual(test_data,expected_data)
     
