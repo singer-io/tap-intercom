@@ -49,7 +49,7 @@ class intercomInterruptedSyncTest(IntercomBaseTest):
 
         conn_id = connections.ensure_connection(self, original_properties=False)
 
-        expected_streams = {"company_segments", "conversations", "segments", "admins"}
+        expected_streams = {"company_segments", "conversations", "segments", "admins", "contacts", "companies"}
 
         # Run check mode
         found_catalogs = self.run_and_verify_check_mode(conn_id)
