@@ -3,7 +3,6 @@
     "null",
     "object"
   ],
-  "additionalProperties": false,
   "properties": {
     "type": {
       "type": [
@@ -441,9 +440,20 @@
           "null",
           "object"
         ],
-        "additionalProperties": false,
         "properties": {
           "id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "url": {
             "type": [
               "null",
               "string"
