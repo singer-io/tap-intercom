@@ -1,7 +1,16 @@
 # Changelog
 
+
+## 2.1.0
+ * Fix conversations stream bookmarking [#73](https://github.com/singer-io/tap-intercom/pull/73)
+ * Update conversations schema [#71](https://github.com/singer-io/tap-intercom/pull/71)
+ * Update contacts schema [#70](https://github.com/singer-io/tap-intercom/pull/70)
+
+## 2.0.2
+ * Retry on responses with no JSON [#66](https://github.com/singer-io/tap-intercom/pull/66)
+
 ## 2.0.1
-  * Dependabot update [#62](https://github.com/singer-io/tap-intercom/pull/62)
+ * Fix schema for Conversations custom_attributes field [#63](https://github.com/singer-io/tap-intercom/pull/63)
 
 ## 2.0.0
  * Update primary keys for company_attributes and contacts stream [#56](https://github.com/singer-io/tap-intercom/pull/56)

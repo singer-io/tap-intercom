@@ -2,39 +2,6 @@
   "type": "object",
   "additionalProperties": false,
   "properties": {
-    "assignee": {
-      "type": [
-        "null",
-        "object"
-      ],
-      "additionalProperties": false,
-      "properties": {
-        "id": {
-          "type": [
-            "null",
-            "string"
-          ]
-        },
-        "type": {
-          "type": [
-            "null",
-            "string"
-          ]
-        },
-        "name": {
-          "type": [
-            "null",
-            "string"
-          ]
-        },
-        "email": {
-          "type": [
-            "null",
-            "string"
-          ]
-        }
-      }
-    },
     "source": {
       "type": [
         "null",
@@ -874,20 +841,7 @@
         "null",
         "object"
       ],
-      "properties": {
-        "issue_type": {
-          "type": [
-            "null",
-            "string"
-          ]
-        },
-        "priority": {
-          "type": [
-            "null",
-            "string"
-          ]
-        }
-      }
+      "additionalProperties": true
     }
   }
 }
