@@ -1,5 +1,7 @@
 # Changelog
 
+## 2.1.1
+ * Bump requests from 2.23.0 to 2.32.3 [#62](https://github.com/singer-io/tap-intercom/pull/62)
 
 ## 2.1.0
  * Fix conversations stream bookmarking [#73](https://github.com/singer-io/tap-intercom/pull/73)
