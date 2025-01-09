@@ -3,14 +3,14 @@
 from setuptools import setup, find_packages
 
 setup(name='tap-intercom',
-      version='2.1.0',
+      version='2.1.1',
       description='Singer.io tap for extracting data from the Intercom API',
       author='jeff.huth@bytecode.io',
       classifiers=['Programming Language :: Python :: 3 :: Only'],
       py_modules=['tap_intercom'],
       install_requires=[
           'backoff==1.8.0',
-          'requests==2.23.0',
+          'requests==2.32.3',
           'singer-python==5.10.0'
       ],
       entry_points='''
