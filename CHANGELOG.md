@@ -1,7 +1,16 @@
 # Changelog
 
-## 2.1.0
+
+## 2.2.0
  * Run on python 3.11 [#69](https://github.com/singer-io/tap-intercom/pull/69)
+
+## 2.1.1
+ * Bump requests from 2.23.0 to 2.32.3 [#62](https://github.com/singer-io/tap-intercom/pull/62)
+
+## 2.1.0
+ * Fix conversations stream bookmarking [#73](https://github.com/singer-io/tap-intercom/pull/73)
+ * Update conversations schema [#71](https://github.com/singer-io/tap-intercom/pull/71)
+ * Update contacts schema [#70](https://github.com/singer-io/tap-intercom/pull/70)
 
 ## 2.0.2
  * Retry on responses with no JSON [#66](https://github.com/singer-io/tap-intercom/pull/66)

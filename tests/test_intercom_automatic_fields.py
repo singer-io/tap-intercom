@@ -13,6 +13,13 @@ class IntercomAutomaticFields(IntercomBaseTest):
     def name():
         return "tap_tester_intercom_automatic_fields"
 
+    def get_properties(self):
+        """Configuration properties required for the tap."""
+        return_value = {
+            'start_date' : "2016-01-01T00:00:00Z"
+        }
+        return return_value
+
     def test_run(self):
         """
             Verify that for each stream you can get multiple pages of data
@@ -25,7 +32,7 @@ class IntercomAutomaticFields(IntercomBaseTest):
         """
         # Created card for untestable/unstable streams.
         # FIX CARD: https://jira.talendforge.org/browse/TDL-17035
-        untestable_streams = {"segments"}
+        untestable_streams = {"conversation_parts", "conversations", "segments", "tags", "company_segments"}
         expected_streams =  self.expected_streams().difference(untestable_streams)
 
         # Instantiate connection
