@@ -1,5 +1,9 @@
 # Changelog
 
+
+## 2.2.0
+ * Run on python 3.11 [#69](https://github.com/singer-io/tap-intercom/pull/69)
+
 ## 2.1.1
  * Bump requests from 2.23.0 to 2.32.3 [#62](https://github.com/singer-io/tap-intercom/pull/62)
 
