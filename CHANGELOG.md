@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.2.0
+ * API version upgrade to 2.12 [#76](https://github.com/singer-io/tap-intercom/pull/76)
+
 ## 2.1.1
  * Bump requests from 2.23.0 to 2.32.3 [#62](https://github.com/singer-io/tap-intercom/pull/62)
 
