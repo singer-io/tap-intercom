@@ -24,6 +24,38 @@
         }
       }
     },
+    "team_priority_level": {
+      "type": ["null", "object"],
+      "additionalProperties": false,
+      "properties": {
+        "primary_team_ids": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "secondary_team_ids": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
     "away_mode_enabled": {
       "type": ["null", "boolean"]
     },

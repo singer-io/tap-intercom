@@ -62,6 +62,12 @@
         "boolean"
       ]
     },
+    "messenger_writable": {
+      "type": [
+        "null",
+        "boolean"
+      ]
+    },
     "ui_writable": {
       "type": [
         "null",

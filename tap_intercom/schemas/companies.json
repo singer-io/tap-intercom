@@ -16,6 +16,9 @@
     "id": {
       "type": ["null", "string"]
     },
+    "app_id": {
+      "type": ["null", "string"]
+    },
     "industry": {
       "type": ["null", "string"]
     },

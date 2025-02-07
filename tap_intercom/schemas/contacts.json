@@ -40,6 +40,24 @@
         "string"
       ]
     },
+    "email_domain": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "segment_id": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "tag_id": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
     "phone": {
       "type": [
         "null",
