@@ -38,7 +38,14 @@ class IntercomAllFields(IntercomBaseTest):
             'admin_id'
         },
         'contacts': {
-            'tags'
+            'tags',
+            # Data for this field exists, but it's missing in the API response,
+            # though documented in the contacts schema.
+            'email_domain'
+        },
+        'teams': {
+            # Though documented in the teams schema, it is missing from the API response.
+            'admin_priority_level'
         }
     }
 
@@ -120,3 +127,4 @@ class IntercomAllFields(IntercomBaseTest):
 
                 expected_all_keys = expected_all_keys - self.fields_to_remove.get(stream,set())
                 self.assertSetEqual(expected_all_keys, actual_all_keys)
+
