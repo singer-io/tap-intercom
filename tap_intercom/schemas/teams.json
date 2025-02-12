@@ -23,6 +23,38 @@
     },
     "type": {
       "type": ["null", "string"]
+    },
+    "admin_priority_level": {
+      "type": ["null", "object"],
+      "additionalProperties": false,
+      "properties": {
+        "primary_admin_ids": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "secondary_admin_ids": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
     }
   }
 }

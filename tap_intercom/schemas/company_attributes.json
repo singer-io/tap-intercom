@@ -8,6 +8,9 @@
     "api_writable": {
       "type": ["null", "boolean"]
     },
+    "messenger_writable": {
+      "type": ["null", "boolean"]
+    },
     "archived": {
       "type": ["null", "boolean"]
     },

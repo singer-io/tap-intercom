@@ -7,7 +7,7 @@ from singer import metrics, utils
 
 LOGGER = singer.get_logger()
 
-API_VERSION = '2.5'
+API_VERSION = '2.12'
 
 REQUEST_TIMEOUT = 300
 

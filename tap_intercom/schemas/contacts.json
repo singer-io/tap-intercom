@@ -40,6 +40,12 @@
         "string"
       ]
     },
+    "email_domain": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
     "phone": {
       "type": [
         "null",
