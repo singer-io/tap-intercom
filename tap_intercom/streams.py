@@ -12,7 +12,7 @@ import singer
 from singer import Transformer, metrics, metadata, UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING
 from singer.transform import transform, unix_milliseconds_to_datetime
 
-from tap_intercom.client import (IntercomClient, IntercomError)
+from tap_intercom.client import (IntercomClient, IntercomError, IntercomNotFoundError)
 from tap_intercom.transform import (transform_json, transform_times, find_datetimes_in_schema)
 
 LOGGER = singer.get_logger()
@@ -236,13 +236,13 @@ class IncrementalStream(BaseStream):
         max_datetime = sync_start_date
         # We are not using singer's record counter as the counter reset after 60 seconds
         record_counter = 0
-
+        all_counter = 0
         schema_datetimes = find_datetimes_in_schema(stream_schema)
 
         with metrics.record_counter(self.tap_stream_id) as counter:
             for record in self.get_records(sync_start_date, stream_metadata=stream_metadata):
                 # In case of interrupted sync, skip records last synced conversations
-
+                all_counter += 1
                 transform_times(record, schema_datetimes)
 
                 record_datetime = singer.utils.strptime_to_utc(
@@ -276,8 +276,11 @@ class IncrementalStream(BaseStream):
                     # Reset counter
                     record_counter = 0
 
+                if all_counter % 1000 == 0:
+                    LOGGER.info("Still Syncing: {}, total_records written so far: {}. total seen {}".format(self.tap_stream_id, record_counter, all_counter))
+
             bookmark_date = singer.utils.strftime(max_datetime)
-            LOGGER.info("FINISHED Syncing: {}, total_records: {}.".format(self.tap_stream_id, counter.value))
+            LOGGER.info("FINISHED Syncing: {}, total_records: {}.".format(self.tap_stream_id, record_counter))
 
         LOGGER.info("Stream: {}, writing final bookmark".format(self.tap_stream_id))
         self.write_bookmark(state, bookmark_date)
@@ -431,9 +434,14 @@ class Companies(IncrementalStream):
         scrolling = True
         params = {}
         LOGGER.info("Syncing: {}".format(self.tap_stream_id))
+        records = []
 
-        while scrolling:
-            response = self.client.get(self.path, params=params)
+        while True:
+            try:
+                response = self.client.get(self.path, params=params)
+            except IntercomNotFoundError as err:
+                LOGGER.info("Synced last page: {}, records: {}".format(self.tap_stream_id, len(records)))
+                break
 
             if response.get(self.data_key) is None:
                 LOGGER.warning('response is empty for "{}" stream'.format(self.tap_stream_id))
@@ -442,12 +450,10 @@ class Companies(IncrementalStream):
             LOGGER.info("Synced: {}, records: {}".format(self.tap_stream_id, len(records)))
 
             # stop scrolling if 'data' array is empty
-            if 'scroll_param' in response and response.get(self.data_key):
+            if len(records) > 0:
                 scroll_param = response.get('scroll_param')
                 params = {'scroll_param': scroll_param}
                 LOGGER.info("Syncing next page")
-            else:
-                scrolling = False
 
             yield from records
 
@@ -487,7 +493,7 @@ class CompanyAttributes(FullTableStream):
             yield from response.get(self.data_key,  [])
 
 
-class CompnaySegments(IncrementalStream):
+class CompanySegments(IncrementalStream):
     """
     Retrieve company segments
 
@@ -897,7 +903,7 @@ STREAMS = {
     "admins": Admins,
     "companies": Companies,
     "company_attributes": CompanyAttributes,
-    "company_segments": CompnaySegments,
+    "company_segments": CompanySegments,
     "conversations": Conversations,
     "conversation_parts": ConversationParts,
     "contact_attributes": ContactAttributes,
