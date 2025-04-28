@@ -2,7 +2,7 @@ import unittest
 import singer
 import datetime as dt
 from unittest import mock
-from tap_intercom.client import IntercomClient, IntercomError
+from tap_intercom.client import IntercomClient, IntercomError, IntercomNotFoundError
 from parameterized import parameterized
 from tap_intercom.streams import AdminList, BaseStream, Admins,Companies, CompanyAttributes, Contacts, ContactAttributes, CompanySegments, Conversations, Segments, Tags, Teams, ConversationParts
 
@@ -10,7 +10,7 @@ class TestData(unittest.TestCase):
 
     base_client = IntercomClient("test","300")
     @parameterized.expand([
-        ['Companies',[Companies, [{'data':'', 'scroll_param':''},{'data':''}]], []],
+        ['Companies',[Companies, IntercomNotFoundError()], []],
         ['CompanyAttributes',[CompanyAttributes, [{'data':['test1'],'pages':{'next':'abc'}},{'data':['test2'],'pages':{'next':''}}]],['test1','test2']],
         ['CompanySegments',[CompanySegments,[{'segments':['test1'],'pages':{'next':'abc'}},{'segments':['test2'],'pages':{'next':''}}]],['test1','test2']],
         ['Segments',[Segments,[{'segments':['test1'],'pages':{'next':'abc'}},{'segments':['test2'],'pages':{'next':''}}]],['test1','test2']],
