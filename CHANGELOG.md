@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.2.1
+ * Improve companies stream completion [#77](https://github.com/singer-io/tap-intercom/pull/77)
+
 ## 2.2.0
  * API version upgrade to 2.12 [#76](https://github.com/singer-io/tap-intercom/pull/76)
 

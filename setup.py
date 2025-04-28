@@ -3,7 +3,7 @@
 from setuptools import setup, find_packages
 
 setup(name='tap-intercom',
-      version='2.2.0',
+      version='2.2.1',
       description='Singer.io tap for extracting data from the Intercom API',
       author='jeff.huth@bytecode.io',
       classifiers=['Programming Language :: Python :: 3 :: Only'],
