@@ -434,6 +434,7 @@ class Companies(IncrementalStream):
         scrolling = True
         params = {}
         LOGGER.info("Syncing: {}".format(self.tap_stream_id))
+        records = []
 
         while True:
             try:
