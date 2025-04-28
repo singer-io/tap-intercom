@@ -4,15 +4,15 @@ import datetime as dt
 from unittest import mock
 from tap_intercom.client import IntercomClient, IntercomError
 from parameterized import parameterized
-from tap_intercom.streams import AdminList, BaseStream, Admins,Companies, CompanyAttributes,Contacts, ContactAttributes,CompnaySegments, Conversations, Segments, Tags, Teams,ConversationParts
+from tap_intercom.streams import AdminList, BaseStream, Admins,Companies, CompanyAttributes, Contacts, ContactAttributes, CompanySegments, Conversations, Segments, Tags, Teams, ConversationParts
 
 class TestData(unittest.TestCase):
-    
+
     base_client = IntercomClient("test","300")
     @parameterized.expand([
         ['Companies',[Companies, [{'data':'', 'scroll_param':''},{'data':''}]], []],
         ['CompanyAttributes',[CompanyAttributes, [{'data':['test1'],'pages':{'next':'abc'}},{'data':['test2'],'pages':{'next':''}}]],['test1','test2']],
-        ['CompanySegments',[CompnaySegments,[{'segments':['test1'],'pages':{'next':'abc'}},{'segments':['test2'],'pages':{'next':''}}]],['test1','test2']],
+        ['CompanySegments',[CompanySegments,[{'segments':['test1'],'pages':{'next':'abc'}},{'segments':['test2'],'pages':{'next':''}}]],['test1','test2']],
         ['Segments',[Segments,[{'segments':['test1'],'pages':{'next':'abc'}},{'segments':['test2'],'pages':{'next':''}}]],['test1','test2']],
         ['ContactAttributes',[ContactAttributes,[{'data':['test1'],'pages':{'next':'abc'}},{'data':['test2'],'pages':{'next':''}}]],['test1','test2']],
         ['Tags',[Tags,[{'data':['test1'],'pages':{'next':'abc'}},{'data':['test2'],'pages':{'next':''}}]],['test1','test2']],
@@ -24,13 +24,13 @@ class TestData(unittest.TestCase):
         """
         Verify get_records for stream
         """
-        
+
         test_stream = data[0](self.base_client, None, [])
         mocked_client.side_effect = data[1]
 
         test_data = list(test_stream.get_records())
         self.assertEqual(test_data,expected_data)
-    
+
     @mock.patch("tap_intercom.streams.Admins.get_parent_data")
     @mock.patch("tap_intercom.client.IntercomClient.get")
     def test_admin_get_records(self,mocked_client,mocked_parent_data):
@@ -38,15 +38,15 @@ class TestData(unittest.TestCase):
         Verify get_records for Admin stream
         """
         test_stream = Admins(self.base_client, None, ['admins'])
-        
+
         mocked_parent_data.return_value = ['id']
         mocked_client.return_value = 'test'
-        
+
         parent_data = list(test_stream.get_records())
         expected_data = ['test']
-        
+
         self.assertEqual(parent_data,expected_data)
-    
+
     def test_dt_to_epoch(self):
         """
             Verify expected epoch time with UTC datetime
@@ -58,7 +58,7 @@ class TestData(unittest.TestCase):
         test_epoch = BaseStream.dt_to_epoch_seconds(converted_datetime)
 
         self.assertEqual(test_epoch,expected_epoch)
-    
+
     @mock.patch("tap_intercom.client.IntercomClient.get")
     @mock.patch("tap_intercom.streams.LOGGER.critical")
     def test_admin_list_get_records(self,mocked_logger,mocked_client):
@@ -66,14 +66,14 @@ class TestData(unittest.TestCase):
         Verify get_records for AdminList
         """
         test_stream = AdminList(self.base_client, None, ['admin_list'])
-        
+
         mocked_client.return_value = {}
-        
+
         with self.assertRaises(IntercomError) as e:
             list(test_stream.get_records())
-        
+
         self.assertEqual(mocked_logger.call_count,1)
-    
+
     @mock.patch("tap_intercom.client.IntercomClient.post",side_effect =[{'data':[{'key': 'value', 'tags': {}, 'companies': {}}],'pages':{'next':''}}])
     @mock.patch("tap_intercom.streams.BaseStream.dt_to_epoch_seconds")
     def test_contacts_get_records(self,mocked_time,mocked_client):
@@ -84,11 +84,11 @@ class TestData(unittest.TestCase):
 
         test_data = list(test_stream.get_records(stream_metadata={}))
         expected_data = [{'key': 'value'}]
-        
+
         self.assertEqual(test_data,expected_data)
-    
+
 class TestFullTable(unittest.TestCase):
-        
+
     base_client = IntercomClient("test","300")
 
     @mock.patch("tap_intercom.transform.find_datetimes_in_schema")
