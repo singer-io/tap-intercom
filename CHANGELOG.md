@@ -1,7 +1,7 @@
 # Changelog
 
 ## 2.2.2
-  * Bump dependency versions for twistlock compliance [#81](https://github.com/singer-io/tap-intercom/pull/81)
+  * Bump dependency versions for twistlock compliance [#80](https://github.com/singer-io/tap-intercom/pull/80)
 
 ## 2.2.1
  * Improve companies stream completion [#77](https://github.com/singer-io/tap-intercom/pull/77)
