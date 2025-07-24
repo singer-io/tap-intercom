@@ -2,26 +2,27 @@ version: 2
 jobs:
   build:
     docker:
-      - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/circle-ci:stitch-tap-tester
+      - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/circle-ci:stitch-tap-tester-uv
     steps:
       - checkout
       - run:
           name: 'Setup virtual env'
           command: |
-            python3 -mvenv /usr/local/share/virtualenvs/tap-intercom
+            uv venv --python 3.11 /usr/local/share/virtualenvs/tap-intercom
             source /usr/local/share/virtualenvs/tap-intercom/bin/activate
-            pip install .[dev]
-            pip install coverage parameterized
+            uv pip install .[dev]
+            uv pip install pytest coverage parameterized
       - run:
           name: 'pylint'
           command: |
             source /usr/local/share/virtualenvs/tap-intercom/bin/activate
+            apt-get update && apt-get install -y make
             make test
       - run:
           name: 'Unit Tests'
           command: |
             source /usr/local/share/virtualenvs/tap-intercom/bin/activate
-            nosetests --with-coverage --cover-erase --cover-package=tap_intercom --cover-html-dir=htmlcov tests/unittests/
+            coverage run -m pytest tests/unittests
             coverage html
       - store_test_results:
           path: test_output/report.xml
@@ -31,9 +32,10 @@ jobs:
       - run:
           name: 'Integration Tests'
           command: |
+            source /usr/local/share/virtualenvs/tap-tester/bin/activate
+            uv pip install --upgrade awscli
             aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev_env.sh
             source dev_env.sh
-            source /usr/local/share/virtualenvs/tap-tester/bin/activate
             run-test --tap=tap-intercom tests
 
 workflows:
