@@ -16,6 +16,7 @@ jobs:
           name: 'pylint'
           command: |
             source /usr/local/share/virtualenvs/tap-intercom/bin/activate
+            apt-get update && apt-get install -y make
             make test
       - run:
           name: 'Unit Tests'
