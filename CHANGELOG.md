@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.2.3
+  * Fix pylint errors [#83](https://github.com/singer-io/tap-intercom/pull/83)
+
 ## 2.2.2
   * Bump dependency versions for twistlock compliance [#80](https://github.com/singer-io/tap-intercom/pull/80)
 
