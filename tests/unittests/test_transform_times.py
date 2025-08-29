@@ -1,4 +1,3 @@
-import nose
 import json
 import singer
 from copy import deepcopy
@@ -258,21 +257,17 @@ CONVERSATION_SCHEMA_DATETIMES = [
     ['statistics', 'last_admin_reply_at'],
     ['statistics', 'last_close_at'],
     ['tags', ['applied_at']],
-    ['updated_at'], 
+    ['updated_at'],
     ['waiting_since']
 ]
 
 
 def test_transform_times():
     conversation_to_transfrom = deepcopy(RAW_CONVERSATION)
-    
+
     transform_times(conversation_to_transfrom, CONVERSATION_SCHEMA_DATETIMES)
     transformed_conversation_json = json.dumps(conversation_to_transfrom)
 
     expected_conversation_json = json.dumps(EXPECTED_CONVERSATION)
 
     assert transformed_conversation_json == expected_conversation_json, "transformed_conversation_json != expected_conversation_json"
-
-
-if __name__ == '__main__':   
-    nose.run()
