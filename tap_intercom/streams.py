@@ -203,7 +203,7 @@ class IncrementalStream(BaseStream):
 
         # If the current stream has a child stream, then get the child stream's bookmark
         # And update the sync start date to minimum of parent bookmark or child bookmark
-        child_bookmark = None
+        child_bookmark_ts = None
         child_stream_obj = None
         child_metadata = None
         if has_child:
