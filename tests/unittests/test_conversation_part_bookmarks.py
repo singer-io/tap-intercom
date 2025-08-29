@@ -67,6 +67,6 @@ class TestConversationPartsBookmarking(unittest.TestCase):
         ]
 
         # Verify that write_bookmark() is called with expected values
-        self.assertEquals(mocked_write_bookmark.mock_calls, expected_write_bookmark)
+        self.assertEqual(mocked_write_bookmark.mock_calls, expected_write_bookmark)
         # Verify we get 'conversation_parts' bookmark
         self.assertIsNotNone(tap_state.get('bookmarks').get('conversation_parts'))

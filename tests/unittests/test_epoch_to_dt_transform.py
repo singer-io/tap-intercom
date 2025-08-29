@@ -13,4 +13,4 @@ class TestEpochToDatetimeTransform(unittest.TestCase):
         datetime_str = BaseStream.epoch_milliseconds_to_dt_str(test_epoch)
 
         # Verify that test epoch time is converted to valid UTC datetime
-        self.assertEquals(datetime_str, expected_utc_datetime)
+        self.assertEqual(datetime_str, expected_utc_datetime)
