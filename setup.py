@@ -24,7 +24,7 @@ setup(name='tap-intercom',
        include_package_data=True,
       extras_require={
           'dev': [
-              'pylint==2.14.5',
+              'pylint',
               'ipdb',
               'nose',
               'parameterized'
