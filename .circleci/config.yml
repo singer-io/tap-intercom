@@ -8,7 +8,7 @@ jobs:
       - run:
           name: 'Setup virtual env'
           command: |
-            uv venv --python 3.11 /usr/local/share/virtualenvs/tap-intercom
+            uv venv --python 3.12 /usr/local/share/virtualenvs/tap-intercom
             source /usr/local/share/virtualenvs/tap-intercom/bin/activate
             uv pip install .[dev]
             uv pip install pytest coverage parameterized

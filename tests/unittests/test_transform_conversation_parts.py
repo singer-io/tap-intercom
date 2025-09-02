@@ -1,4 +1,3 @@
-import nose
 import json
 import singer
 from tap_intercom.transform import transform_conversation_parts
@@ -224,7 +223,3 @@ def test_transform_conversation_parts():
 
     assert transformed_conv_parts_len == expected_conv_parts_len, "conversation_parts len != expected_conversation_parts len"
     assert transformed_conv_parts_json == expected_conv_parts_json, "conversation_parts_json != expected_conversation_parts_json"
-
-
-if __name__ == '__main__':   
-    nose.run()

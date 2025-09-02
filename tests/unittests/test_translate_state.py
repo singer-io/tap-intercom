@@ -41,7 +41,7 @@ class TestTranslateState(unittest.TestCase):
         new_state = translate_state(state)
 
         # Verify that returned state is as expected with new format
-        self.assertEquals(new_state, expected_state)
+        self.assertEqual(new_state, expected_state)
 
 
     def test_state_translate_for_new_format(self):
@@ -72,4 +72,4 @@ class TestTranslateState(unittest.TestCase):
         new_state = translate_state(new_format_state)
 
         # Verify that returned state is same for new formatted state
-        self.assertEquals(new_state, new_format_state)
+        self.assertEqual(new_state, new_format_state)

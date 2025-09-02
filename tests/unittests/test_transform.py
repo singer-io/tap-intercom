@@ -1,4 +1,3 @@
-import nose
 import unittest
 from singer.transform import unix_milliseconds_to_datetime
 from tap_intercom.transform import get_integer_places, transform_json, find_datetimes_in_schema
@@ -63,8 +62,3 @@ class TestTransform(unittest.TestCase):
         # Call the datetime function
         path = find_datetimes_in_schema(test_schema)
         self.assertEqual(path,exp)
-
-
-
-if __name__ == '__main__':
-    nose.run()

@@ -252,7 +252,7 @@ reference#list-customer-data-attributes)
 
     To run unit tests run the following command:
     ```
-    python -m nose
+    pytest tests/unittests
     ```
 ---
 
