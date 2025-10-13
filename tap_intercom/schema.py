@@ -40,6 +40,12 @@ def get_schemas():
             )
 
             mdata = metadata.to_map(mdata)
+            
+            # Check if the stream has any parent attribute
+            parent_class = getattr(stream_object, 'parent', None)
+            if parent_class and hasattr(parent_class, 'tap_stream_id'):
+                parent_tap_stream_id = parent_class.tap_stream_id
+                mdata = metadata.write(mdata, (), 'parent-tap-stream-id', parent_tap_stream_id)
 
             if stream_object.replication_key:
                 mdata = metadata.write(
