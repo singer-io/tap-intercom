@@ -79,7 +79,7 @@ class DiscoveryTest(IntercomBaseTest):
                     "metadata", {self.REPLICATION_METHOD: None}).get(self.REPLICATION_METHOD)
                 
                 actual_parent_stream_id = stream_properties[0].get(
-                    "metadata", {}).get("parent-tap-stream-id")
+                    "metadata", {}).get(self.PARENT_TAP_STREAM_ID)
                 ##########################################################################
                 ### metadata assertions
                 ##########################################################################

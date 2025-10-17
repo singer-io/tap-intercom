@@ -27,6 +27,7 @@ class IntercomBaseTest(unittest.TestCase):
     PRIMARY_KEYS = "table-key-properties"
     FOREIGN_KEYS = "table-foreign-key-properties"
     REPLICATION_METHOD = "forced-replication-method"
+    PARENT_TAP_STREAM_ID = "parent-tap-stream-id"
     EXPECTED_PARENT_STREAM = "expected-parent-stream"
     OBEYS_START_DATE = "obeys-start-date"
     API_LIMIT = "max-row-limit"
