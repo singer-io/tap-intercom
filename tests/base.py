@@ -27,6 +27,7 @@ class IntercomBaseTest(unittest.TestCase):
     PRIMARY_KEYS = "table-key-properties"
     FOREIGN_KEYS = "table-foreign-key-properties"
     REPLICATION_METHOD = "forced-replication-method"
+    EXPECTED_PARENT_STREAM = "expected-parent-stream"
     OBEYS_START_DATE = "obeys-start-date"
     API_LIMIT = "max-row-limit"
     INCREMENTAL = "INCREMENTAL"
@@ -80,6 +81,7 @@ class IntercomBaseTest(unittest.TestCase):
             "admins": {
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.FULL_TABLE,
+                self.EXPECTED_PARENT_STREAM: "admin_list",
                 self.OBEYS_START_DATE : False
             },
             "companies": {
@@ -109,6 +111,7 @@ class IntercomBaseTest(unittest.TestCase):
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.REPLICATION_KEYS: {"updated_at"},
+                self.EXPECTED_PARENT_STREAM: "conversations",
                 self.OBEYS_START_DATE : True
             },
             "contact_attributes": {
