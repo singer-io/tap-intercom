@@ -40,7 +40,6 @@ def get_schemas():
             )
 
             mdata = metadata.to_map(mdata)
-            
             # Check if the stream has any parent attribute
             parent_class = getattr(stream_object, 'parent', None)
             if parent_class and hasattr(parent_class, 'tap_stream_id'):
