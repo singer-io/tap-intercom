@@ -1,6 +1,6 @@
 # Changelog
 
-## 2.2.4
+## 2.3.0
   * Adds parent-tap-stream-id field to catalog for child streams [#84](https://github.com/singer-io/tap-intercom/pull/84)
 
 ## 2.2.3
