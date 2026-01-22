@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.2.4
+  * Fix interrupted bookmarking for conversations [#85](https://github.com/singer-io/tap-intercom/pull/85)
+
 ## 2.2.3
   * Fix pylint errors [#83](https://github.com/singer-io/tap-intercom/pull/83)
 
