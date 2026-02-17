@@ -87,6 +87,38 @@ class TestData(unittest.TestCase):
 
         self.assertEqual(test_data,expected_data)
 
+    @mock.patch("tap_intercom.client.IntercomClient.get")
+    def test_companies_empty_data_stops_scrolling(self, mocked_client):
+        """
+        Verify that Companies stream stops scrolling when the API returns
+        an empty data array instead of looping indefinitely.
+        """
+        test_stream = Companies(self.base_client, None, [])
+        # First call returns records, second call returns empty data
+        mocked_client.side_effect = [
+            {'data': [{'id': '1', 'type': 'company'}], 'scroll_param': 'scroll_abc'},
+            {'data': [], 'scroll_param': 'scroll_abc'},
+        ]
+
+        test_data = list(test_stream.get_records())
+        self.assertEqual(test_data, [{'id': '1', 'type': 'company'}])
+        # Should have been called exactly twice: once for data, once for empty
+        self.assertEqual(mocked_client.call_count, 2)
+
+    @mock.patch("tap_intercom.client.IntercomClient.get")
+    def test_companies_immediate_empty_data_stops_scrolling(self, mocked_client):
+        """
+        Verify that Companies stream stops immediately when the very first
+        API response returns an empty data array.
+        """
+        test_stream = Companies(self.base_client, None, [])
+        mocked_client.return_value = {'data': [], 'scroll_param': 'scroll_abc'}
+
+        test_data = list(test_stream.get_records())
+        self.assertEqual(test_data, [])
+        # Should have been called exactly once
+        self.assertEqual(mocked_client.call_count, 1)
+
 class TestFullTable(unittest.TestCase):
 
     base_client = IntercomClient("test","300")

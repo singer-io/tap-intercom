@@ -452,11 +452,13 @@ class Companies(IncrementalStream):
             records = transform_json(response, self.tap_stream_id, self.data_key)
             LOGGER.info("Synced: {}, records: {}".format(self.tap_stream_id, len(records)))
 
-            # stop scrolling if 'data' array is empty
-            if len(records) > 0:
-                scroll_param = response.get('scroll_param')
-                params = {'scroll_param': scroll_param}
-                LOGGER.info("Syncing next page")
+            # After (fixed): breaks on empty, advances otherwise
+            if len(records) == 0:
+                break
+
+            scroll_param = response.get('scroll_param')
+            params = {'scroll_param': scroll_param}
+            LOGGER.info("Syncing next page")
 
             yield from records
 
