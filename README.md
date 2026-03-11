@@ -20,6 +20,7 @@ This tap:
     - [Company Segments](https://developers.intercom.com/intercom-api-reference/reference#list-segments)
   - [Tags](https://developers.intercom.com/intercom-api-reference/reference#list-tags-for-an-app)
   - [Teams](https://developers.intercom.com/intercom-api-reference/reference#list-teams)
+  - [Tickets](https://developers.intercom.com/intercom-api-reference/reference/search-tickets)
   - [Users](https://developers.intercom.com/intercom-api-reference/reference#list-users)
 - Outputs the schema for each resource
 - Incrementally pulls data based on the input state
@@ -111,6 +112,15 @@ reference#list-customer-data-attributes)
 - Primary key fields: id
 - Foreign key fields: admin_ids
 - Replication strategy: FULL_TABLE
+- Transformations: none
+
+[tickets](https://developers.intercom.com/intercom-api-reference/reference/search-tickets)
+- Endpoint: https://api.intercom.io/tickets/search
+- Primary key fields: id
+- Foreign key fields: contact_ids, admin_assignee_id, team_assignee_id
+- Replication strategy: INCREMENTAL (query filtered)
+  - Sort: updated_at asc
+  - Bookmark: updated_at (date-time)
 - Transformations: none
 
 [users](https://developers.intercom.com/intercom-api-reference/reference#list-users)

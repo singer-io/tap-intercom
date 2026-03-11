@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.3.0
+  * Add tickets stream support
+
 ## 2.2.4
   * Fix interrupted bookmarking for conversations [#85](https://github.com/singer-io/tap-intercom/pull/85)
 

@@ -1,0 +1,593 @@
+{
+  "type": [
+    "null",
+    "object"
+  ],
+  "properties": {
+    "type": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "id": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "ticket_id": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "created_at": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "format": "date-time"
+    },
+    "title": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "description": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "category": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "ticket_type_id": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "state": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "open": {
+      "type": [
+        "null",
+        "boolean"
+      ]
+    },
+    "snoozed_until": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "format": "date-time"
+    },
+    "contact_ids": {
+      "type": [
+        "null",
+        "array"
+      ],
+      "items": {
+        "type": [
+          "null",
+          "string"
+        ]
+      }
+    },
+    "teammate_ids": {
+      "type": [
+        "null",
+        "array"
+      ],
+      "items": {
+        "type": [
+          "null",
+          "string"
+        ]
+      }
+    },
+    "admin_assignee_id": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "team_assignee_id": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "is_shared": {
+      "type": [
+        "null",
+        "boolean"
+      ]
+    },
+    "ticket_attributes": {
+      "type": [
+        "null",
+        "object"
+      ],
+      "additionalProperties": true,
+      "properties": {}
+    },
+    "contacts": {
+      "type": [
+        "null",
+        "object"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "contacts": {
+          "type": [
+            "null",
+            "array"
+          ],
+          "items": {
+            "type": [
+              "null",
+              "object"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "type": [
+                  "null",
+                  "string"
+                ]
+              },
+              "id": {
+                "type": [
+                  "null",
+                  "string"
+                ]
+              },
+              "external_id": {
+                "type": [
+                  "null",
+                  "string"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "ticket_state": {
+      "type": [
+        "null",
+        "object"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "id": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "category": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "internal_label": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "external_label": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "archived": {
+          "type": [
+            "null",
+            "boolean"
+          ]
+        }
+      }
+    },
+    "ticket_type": {
+      "type": [
+        "null",
+        "object"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "id": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "category": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "name": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "description": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "icon": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "workspace_id": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "ticket_type_attributes": {
+          "type": [
+            "null",
+            "object"
+          ],
+          "additionalProperties": true
+        },
+        "ticket_states": {
+          "type": [
+            "null",
+            "object"
+          ],
+          "additionalProperties": true
+        },
+        "archived": {
+          "type": [
+            "null",
+            "boolean"
+          ]
+        },
+        "created_at": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "format": "date-time"
+        },
+        "is_internal": {
+          "type": [
+            "null",
+            "boolean"
+          ]
+        }
+      }
+    },
+    "linked_objects": {
+      "type": [
+        "null",
+        "object"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "data": {
+          "type": [
+            "null",
+            "array"
+          ],
+          "items": {
+            "type": [
+              "null",
+              "object"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": [
+                  "null",
+                  "string"
+                ]
+              },
+              "category": {
+                "type": [
+                  "null",
+                  "string"
+                ]
+              }
+            }
+          }
+        },
+        "total_count": {
+          "type": [
+            "null",
+            "integer"
+          ]
+        },
+        "has_more": {
+          "type": [
+            "null",
+            "boolean"
+          ]
+        }
+      }
+    },
+    "ticket_parts": {
+      "type": [
+        "null",
+        "object"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "ticket_parts": {
+          "type": [
+            "null",
+            "array"
+          ],
+          "items": {
+            "type": [
+              "null",
+              "object"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "type": [
+                  "null",
+                  "string"
+                ]
+              },
+              "id": {
+                "type": [
+                  "null",
+                  "string"
+                ]
+              },
+              "part_type": {
+                "type": [
+                  "null",
+                  "string"
+                ]
+              },
+              "body": {
+                "type": [
+                  "null",
+                  "string"
+                ]
+              },
+              "created_at": {
+                "type": [
+                  "null",
+                  "string"
+                ],
+                "format": "date-time"
+              },
+              "updated_at": {
+                "type": [
+                  "null",
+                  "string"
+                ],
+                "format": "date-time"
+              },
+              "previous_ticket_state": {
+                "type": [
+                  "null",
+                  "string"
+                ]
+              },
+              "ticket_state": {
+                "type": [
+                  "null",
+                  "string"
+                ]
+              },
+              "assigned_to": {
+                "type": [
+                  "null",
+                  "object"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "type": {
+                    "type": [
+                      "null",
+                      "string"
+                    ]
+                  },
+                  "id": {
+                    "type": [
+                      "null",
+                      "string"
+                    ]
+                  }
+                }
+              },
+              "author": {
+                "type": [
+                  "null",
+                  "object"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "type": {
+                    "type": [
+                      "null",
+                      "string"
+                    ]
+                  },
+                  "id": {
+                    "type": [
+                      "null",
+                      "string"
+                    ]
+                  },
+                  "name": {
+                    "type": [
+                      "null",
+                      "string"
+                    ]
+                  },
+                  "email": {
+                    "type": [
+                      "null",
+                      "string"
+                    ]
+                  }
+                }
+              },
+              "attachments": {
+                "type": [
+                  "null",
+                  "array"
+                ],
+                "items": {
+                  "type": [
+                    "null",
+                    "object"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "type": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    "name": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    "url": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    "content_type": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    "filesize": {
+                      "type": [
+                        "null",
+                        "integer"
+                      ]
+                    },
+                    "width": {
+                      "type": [
+                        "null",
+                        "integer"
+                      ]
+                    },
+                    "height": {
+                      "type": [
+                        "null",
+                        "integer"
+                      ]
+                    }
+                  }
+                }
+              },
+              "external_id": {
+                "type": [
+                  "null",
+                  "string"
+                ]
+              },
+              "redacted": {
+                "type": [
+                  "null",
+                  "boolean"
+                ]
+              },
+              "app_package_code": {
+                "type": [
+                  "null",
+                  "string"
+                ]
+              },
+              "updated_attribute_data": {
+                "type": [
+                  "null",
+                  "object"
+                ],
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "total_count": {
+          "type": [
+            "null",
+            "integer"
+          ]
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "type": [
+    "null",
+    "object"
+  ],
+  "properties": {
+    "type": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "id": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "category": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "internal_label": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "external_label": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "archived": {
+      "type": [
+        "null",
+        "boolean"
+      ]
+    },
+    "ticket_types": {
+      "type": [
+        "null",
+        "object"
+      ],
+      "additionalProperties": true
+    }
+  }
+}
+

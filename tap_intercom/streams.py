@@ -152,6 +152,11 @@ class IncrementalStream(BaseStream):
     def skip_records(self, record):
         return False
 
+    def get_start_bookmark(self, state, config):
+        return singer.get_bookmark(
+            state, self.tap_stream_id, self.replication_key, config['start_date']
+        )
+
     def write_bookmark(self, state, bookmark_value):
         return singer.write_bookmark(state,
                                      self.tap_stream_id,
@@ -192,13 +197,28 @@ class IncrementalStream(BaseStream):
         child_stream = STREAMS.get(self.child)
 
         # Get current stream bookmark
-        parent_bookmark = singer.get_bookmark(state, self.tap_stream_id, self.replication_key, config['start_date'])
+        raw_state_bookmark = None
+        if isinstance(state, dict):
+            raw_state_bookmark = state.get("bookmarks", {}).get(self.tap_stream_id)
+        LOGGER.info(
+            "Stream: %s, raw state bookmark entry before get_bookmark: %s",
+            self.tap_stream_id,
+            raw_state_bookmark,
+        )
+
+        parent_bookmark = self.get_start_bookmark(state, config)
+        LOGGER.info(
+            "Stream: %s, config start_date=%s, parent_bookmark used=%s",
+            self.tap_stream_id,
+            config.get("start_date"),
+            parent_bookmark,
+        )
         parent_bookmark_utc = singer.utils.strptime_to_utc(parent_bookmark)
         sync_start_date = parent_bookmark_utc
         self.set_last_processed(state)
         self.set_last_sync_started_at(state)
 
-        is_parent_selected = True
+        is_parent_selected = self.tap_stream_id in self.selected_streams
         is_child_selected = False
 
         # If the current stream has a child stream, then get the child stream's bookmark
@@ -253,14 +273,19 @@ class IncrementalStream(BaseStream):
                         record[self.replication_key])
                 )
 
-                # Write the record if the parent is selected
-                if is_parent_selected and record_datetime >= parent_bookmark_utc:
+                # Write the record if:
+                # 1. Parent is selected AND record >= parent_bookmark, OR
+                # 2. Child is selected AND record >= child_bookmark (need parent record for context)
+                should_write_parent = (is_parent_selected and record_datetime >= parent_bookmark_utc) or \
+                                     (is_child_selected and has_child and record_datetime >= child_bookmark_utc)
+
+                if should_write_parent:
                     record_counter += 1
                     transformed_record = transform(record,
                                                    stream_schema,
                                                    integer_datetime_fmt=UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING,
                                                    metadata=stream_metadata)
-                    # Write record if a parent is selected
+                    # Write record if a parent is selected or if child is selected and needs parent context
                     singer.write_record(self.tap_stream_id, transformed_record, time_extracted=singer.utils.now())
                     counter.increment()
                     max_datetime = max(record_datetime, max_datetime)
@@ -548,6 +573,15 @@ class Conversations(IncrementalStream):
     per_page = MAX_PAGE_SIZE
     child = 'conversation_parts'
 
+    def get_start_bookmark(self, state, config):
+        in_progress_bookmark = singer.get_bookmark(
+            state, self.tap_stream_id, "last_sync_started_at"
+        )
+        default_bookmark = in_progress_bookmark or config['start_date']
+        return singer.get_bookmark(
+            state, self.tap_stream_id, self.replication_key, default_bookmark
+        )
+
     def set_last_processed(self, state):
         self.last_processed = singer.get_bookmark(
             state, self.tap_stream_id, "last_processed")
@@ -589,6 +623,10 @@ class Conversations(IncrementalStream):
         state = singer.write_bookmark(state,
                                       self.tap_stream_id,
                                       "last_sync_started_at",
+                                      self.last_sync_started_at)
+        state = singer.write_bookmark(state,
+                                      self.tap_stream_id,
+                                      self.replication_key,
                                       self.last_sync_started_at)
         singer.write_state(state)
 
@@ -901,6 +939,123 @@ class Teams(FullTableStream):
             yield from response.get(self.data_key,  [])
 
 
+class Tickets(IncrementalStream):
+    """
+    Retrieve tickets
+
+    Docs: https://developers.intercom.com/intercom-api-reference/reference/search-tickets
+    """
+    tap_stream_id = 'tickets'
+    key_properties = ['id']
+    path = 'tickets/search'
+    replication_key = 'updated_at'
+    valid_replication_keys = ['updated_at']
+    data_key = 'tickets'
+    per_page = MAX_PAGE_SIZE
+    to_write_intermediate_bookmark = True
+
+    def get_records(self, bookmark_datetime=None, is_parent=False, stream_metadata=None) -> Iterator[list]:
+        paging = True
+        starting_after = None
+        search_query = {
+            'pagination': {
+                'per_page': self.per_page
+            },
+            'query': {
+                'operator': 'OR',
+                'value': [{
+                    'field': self.replication_key,
+                    'operator': '>',
+                    'value': self.dt_to_epoch_seconds(bookmark_datetime)
+                    },
+                    {
+                    'field': self.replication_key,
+                    'operator': '=',
+                    'value': self.dt_to_epoch_seconds(bookmark_datetime)
+                    }]
+                },
+            'sort': {
+                'field': self.replication_key,
+                'order': 'ascending'
+                }
+        }
+        LOGGER.info("Syncing: {}".format(self.tap_stream_id))
+
+        while paging:
+            response = self.client.post(self.path, json=search_query)
+
+            if 'pages' in response and response.get('pages', {}).get('next'):
+                starting_after = response.get('pages').get('next').get('starting_after')
+                search_query['pagination'].update({'starting_after': starting_after})
+            else:
+                paging = False
+
+            records = transform_json(response, self.tap_stream_id, self.data_key)
+            LOGGER.info("Synced: {} for page: {}, records: {}".format(self.tap_stream_id, response.get('pages', {}).get('page'), len(records)))
+
+            yield from records
+
+
+class TicketTypes(FullTableStream):
+    """
+    Retrieve ticket types
+
+    Docs: https://developers.intercom.com/docs/references/rest-api/api.intercom.io/ticket-types
+    """
+    tap_stream_id = 'ticket_types'
+    key_properties = ['id']
+    path = 'ticket_types'
+    data_key = 'data'
+
+    def get_records(self, bookmark_datetime=None, is_parent=False) -> Iterator[list]:
+        paging = True
+        next_page = None
+        LOGGER.info("Syncing: {}".format(self.tap_stream_id))
+
+        while paging:
+            response = self.client.get(self.path, url=next_page, params=self.params)
+
+            LOGGER.info("Synced: {}, records: {}".format(self.tap_stream_id, len(response.get(self.data_key, []))))
+            if 'pages' in response and response.get('pages', {}).get('next'):
+                next_page = response.get('pages', {}).get('next')
+                self.path = None
+                LOGGER.info("Syncing next page")
+            else:
+                paging = False
+
+            yield from response.get(self.data_key, [])
+
+
+class TicketStates(FullTableStream):
+    """
+    Retrieve ticket states
+
+    Docs: https://developers.intercom.com/docs/references/rest-api/api.intercom.io/ticket-states
+    """
+    tap_stream_id = 'ticket_states'
+    key_properties = ['id']
+    path = 'ticket_states'
+    data_key = 'data'
+
+    def get_records(self, bookmark_datetime=None, is_parent=False) -> Iterator[list]:
+        paging = True
+        next_page = None
+        LOGGER.info("Syncing: {}".format(self.tap_stream_id))
+
+        while paging:
+            response = self.client.get(self.path, url=next_page, params=self.params)
+
+            LOGGER.info("Synced: {}, records: {}".format(self.tap_stream_id, len(response.get(self.data_key, []))))
+            if 'pages' in response and response.get('pages', {}).get('next'):
+                next_page = response.get('pages', {}).get('next')
+                self.path = None
+                LOGGER.info("Syncing next page")
+            else:
+                paging = False
+
+            yield from response.get(self.data_key, [])
+
+
 STREAMS = {
     "admin_list": AdminList,
     "admins": Admins,
@@ -913,5 +1068,8 @@ STREAMS = {
     "contacts": Contacts,
     "segments": Segments,
     "tags": Tags,
-    "teams": Teams
+    "teams": Teams,
+    "tickets": Tickets,
+    "ticket_types": TicketTypes,
+    "ticket_states": TicketStates
 }

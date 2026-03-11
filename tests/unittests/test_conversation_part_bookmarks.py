@@ -70,3 +70,58 @@ class TestConversationPartsBookmarking(unittest.TestCase):
         self.assertEqual(mocked_write_bookmark.mock_calls, expected_write_bookmark)
         # Verify we get 'conversation_parts' bookmark
         self.assertIsNotNone(tap_state.get('bookmarks').get('conversation_parts'))
+
+    def test_conversations_resume_from_in_progress_bookmark(self):
+        client = IntercomClient('dummy_token', None)
+        conversations = Conversations(
+            client=client,
+            catalog=Catalog(['conversations']),
+            selected_streams=['conversations'],
+        )
+
+        state = {
+            'bookmarks': {
+                'conversations': {
+                    'last_processed': '215473344415580',
+                    'last_sync_started_at': '2026-03-11T03:00:55.402219Z',
+                }
+            }
+        }
+
+        bookmark = conversations.get_start_bookmark(
+            state,
+            {'start_date': '2025-12-01T00:00:00Z'},
+        )
+
+        self.assertEqual(bookmark, '2026-03-11T03:00:55.402219Z')
+
+    @mock.patch("tap_intercom.streams.singer.write_state")
+    def test_conversations_intermediate_state_sets_updated_at(self, mocked_write_state):
+        client = IntercomClient('dummy_token', None)
+        conversations = Conversations(
+            client=client,
+            catalog=Catalog(['conversations']),
+            selected_streams=['conversations'],
+        )
+        conversations.last_sync_started_at = '2026-03-11T03:00:55.402219Z'
+
+        tap_state = {}
+        conversations.write_intermediate_bookmark(
+            tap_state,
+            '215473344415580',
+            None,
+        )
+
+        self.assertEqual(
+            tap_state['bookmarks']['conversations']['updated_at'],
+            '2026-03-11T03:00:55.402219Z',
+        )
+        self.assertEqual(
+            tap_state['bookmarks']['conversations']['last_sync_started_at'],
+            '2026-03-11T03:00:55.402219Z',
+        )
+        self.assertEqual(
+            tap_state['bookmarks']['conversations']['last_processed'],
+            '215473344415580',
+        )
+        mocked_write_state.assert_called_once_with(tap_state)

@@ -68,13 +68,41 @@ def sync(config, state, catalog):
     access_token = config.get('access_token')
     client = IntercomClient(access_token, config.get('request_timeout'), config.get('user_agent')) # pass request_timeout parameter from config
 
+    # Some orchestrators (or custom state stores) may wrap the actual Singer
+    # state inside a top-level "singer_state" key, e.g.:
+    # {
+    #     "singer_state": {
+    #         "currently_syncing": null,
+    #         "bookmarks": { ... }
+    #     }
+    # }
+    # The tap, however, expects to receive the inner object as the state. To
+    # support both representations we unwrap the state if needed.
+    if isinstance(state, dict) and "singer_state" in state and isinstance(state["singer_state"], dict):
+        state = state["singer_state"]
+
+    LOGGER.info(
+        "Raw incoming state. type=%s keys=%s",
+        type(state),
+        list(state.keys()) if isinstance(state, dict) else None,
+    )
+
     # Translate state to the new format with replication key in the state
     state = translate_state(state)
 
-    selected_stream_names = []
+    if isinstance(state, dict):
+        LOGGER.info(
+            "Translated state bookmarks keys: %s",
+            list(state.get("bookmarks", {}).keys()),
+        )
+
+    # Determine which streams are selected in the catalog.
+    # If none are explicitly selected, default to all streams.
     selected_streams = list(catalog.get_selected_streams(state))
-    for stream in selected_streams:
-        selected_stream_names.append(stream.tap_stream_id)
+    if not selected_streams:
+        selected_streams = catalog.streams
+
+    selected_stream_names = [stream.tap_stream_id for stream in selected_streams]
 
     with Transformer() as transformer:
         for stream in get_streams_to_sync(catalog, selected_streams, selected_stream_names):
