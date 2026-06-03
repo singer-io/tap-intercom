@@ -1,4 +1,6 @@
 from singer.catalog import Catalog
+
+from tap_intercom.client import IntercomClient
 from tap_intercom.schema import get_schemas
 
 
@@ -8,11 +10,13 @@ def _get_key_properties_from_meta(schema_meta: list) -> str:
     """
     return schema_meta[0].get('metadata').get('table-key-properties')
 
+
 def _get_replication_method_from_meta(schema_meta: list) -> str:
     """
     Gets the forced-replication-method from the schema metadata.
     """
     return schema_meta[0].get('metadata').get('forced-replication-method')
+
 
 def _get_replication_key_from_meta(schema_meta: list) -> str:
     """
@@ -22,11 +26,12 @@ def _get_replication_key_from_meta(schema_meta: list) -> str:
         return schema_meta[0].get('metadata').get('valid-replication-keys')[0]
     return None
 
-def discover():
+
+def discover(client: IntercomClient):
     """
     Constructs a singer Catalog object based on the schemas and metadata.
     """
-    schemas, field_metadata = get_schemas()
+    schemas, field_metadata = get_schemas(client=client)
     streams = []
 
     for schema_name, schema in schemas.items():

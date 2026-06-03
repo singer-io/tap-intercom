@@ -548,6 +548,18 @@ class Conversations(IncrementalStream):
     per_page = MAX_PAGE_SIZE
     child = 'conversation_parts'
 
+    probe_http_method = "POST"
+    probe_search_query = {
+        "pagination": {
+            "per_page": 1
+        },
+        "query": {
+            "field": "id",
+            "operator": "!=",
+            "value": None
+        }
+    }
+
     def set_last_processed(self, state):
         self.last_processed = singer.get_bookmark(
             state, self.tap_stream_id, "last_processed")
@@ -724,6 +736,18 @@ class Contacts(IncrementalStream):
     # addressable_list_fields = ['tags', 'notes', 'companies']
     addressable_list_fields = ['tags', 'companies']
     to_write_intermediate_bookmark = True
+
+    probe_http_method = "POST"
+    probe_search_query = {
+        "pagination": {
+            "per_page": 1
+        },
+        "query": {
+            "field": "id",
+            "operator": "!=",
+            "value": None
+        }
+    }
 
     def get_addressable_list(self, contact_list: dict, stream_metadata: dict) -> dict:
         params = {
