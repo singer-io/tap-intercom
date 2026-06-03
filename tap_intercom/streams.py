@@ -88,7 +88,7 @@ class BaseStream:
     def dt_to_epoch_seconds(dt_object: datetime) -> float:
         return datetime.datetime.timestamp(dt_object)
 
-    def sync_substream(self, parent_id, stream_schema, stream_metadata, parent_replication_key, state):
+    def sync_substream(self, parent_id, stream_schema, stream_metadata, parent_replication_key, state, parent_record=None):
         """
             Sync sub-stream data based on parent id and update the state to parent's replication value
         """
@@ -272,7 +272,7 @@ class IncrementalStream(BaseStream):
                     if self.skip_records(record):
                         self.skipped_parent_ids.append((record.get('id'), record[self.replication_key]))
                         continue
-                    state = child_stream_obj.sync_substream(record.get('id'), child_schema, child_metadata, record[self.replication_key], state)
+                    state = child_stream_obj.sync_substream(record.get('id'), child_schema, child_metadata, record[self.replication_key], state, parent_record=record)
 
                 if record_counter >= MAX_PAGE_SIZE:
                     self.write_intermediate_bookmark(state, record.get("id"), max_datetime)
@@ -724,6 +724,7 @@ class Contacts(IncrementalStream):
     # addressable_list_fields = ['tags', 'notes', 'companies']
     addressable_list_fields = ['tags', 'companies']
     to_write_intermediate_bookmark = True
+    child = 'contact_details'
 
     def get_addressable_list(self, contact_list: dict, stream_metadata: dict) -> dict:
         params = {
@@ -901,6 +902,47 @@ class Teams(FullTableStream):
             yield from response.get(self.data_key,  [])
 
 
+class ContactDetails(BaseStream):
+    """
+    Retrieve full contact details for each contact via the Get Contact endpoint.
+
+    Docs: https://developers.intercom.com/docs/references/rest-api/api.intercom.io/contacts/showcontact
+    """
+    tap_stream_id = 'contact_details'
+    key_properties = ['id']
+    path = 'contacts/{}'
+    replication_method = 'INCREMENTAL'
+    replication_key = 'updated_at'
+    valid_replication_keys = ['updated_at']
+    parent = Contacts
+    data_key = 'contact_details'
+
+    def sync_substream(self, parent_id, stream_schema, stream_metadata, parent_replication_key, state, parent_record=None):
+        """
+        Fetch full contact details via GET /contacts/{id} and write the record.
+
+        If the contact returns 404 "User Not Found", a partial record is written using the fields already
+        available from the parent contacts record. Fields exclusive to this endpoint
+        (UTM params, subscription types, enabled_push_messaging) will be absent.
+        Any other 404 error is re-raised as normal.
+        """
+        try:
+            return super().sync_substream(parent_id, stream_schema, stream_metadata, parent_replication_key, state)
+        except IntercomNotFoundError as e:
+            if 'User Not Found' not in str(e):
+                raise
+            LOGGER.warning("contact_details: contact %s not found, writing partial record from parent.", parent_id)
+            parent_bookmark_value = self.epoch_milliseconds_to_dt_str(parent_replication_key)
+            transformed_record = transform(dict(parent_record),
+                                           stream_schema,
+                                           integer_datetime_fmt=UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING,
+                                           metadata=stream_metadata)
+            singer.write_record(self.tap_stream_id, transformed_record, time_extracted=singer.utils.now())
+            state = singer.write_bookmark(state, self.tap_stream_id, self.replication_key, parent_bookmark_value)
+            singer.write_state(state)
+            return state
+
+
 STREAMS = {
     "admin_list": AdminList,
     "admins": Admins,
@@ -911,6 +953,7 @@ STREAMS = {
     "conversation_parts": ConversationParts,
     "contact_attributes": ContactAttributes,
     "contacts": Contacts,
+    "contact_details": ContactDetails,
     "segments": Segments,
     "tags": Tags,
     "teams": Teams
