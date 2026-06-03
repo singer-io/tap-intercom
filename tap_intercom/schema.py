@@ -82,7 +82,7 @@ def get_schemas(client: IntercomClient):
             if stream_object.parent and stream_object.parent.tap_stream_id in inaccessible_streams:
                 inaccessible_streams.append(stream_name)
                 LOGGER.warning("Stream {} is a child stream and its parent stream {} is inaccessible,"
-                               " hence marking stream {} as inaccessible".format(stream_name, stream_object.parent.tap_stream_id, stream_name))
+                               " hence marking stream as inaccessible".format(stream_name, stream_object.parent.tap_stream_id))
                 continue
 
             # Check stream access

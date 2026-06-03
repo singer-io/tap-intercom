@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
 import singer
-from tap_intercom.client import IntercomClient
 from singer import utils
 
+from tap_intercom.client import IntercomClient
 from tap_intercom.discover import discover
 from tap_intercom.sync import sync
 
