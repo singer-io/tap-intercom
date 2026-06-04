@@ -34,8 +34,7 @@ class TestIntercomInit(unittest.TestCase):
 
         # Return mocked args
         mock_args.return_value = Parse_Args(discover=test_data[0], catalog=test_data[1])
-        with mock_client:
-            main()
+        main()
 
         self.assertEqual(mock_discover.called,exp[0])
         self.assertEqual(mock_sync.called,exp[1])
@@ -43,5 +42,5 @@ class TestIntercomInit(unittest.TestCase):
     def test_discover_coverage(self, mock_client):
         """Test discover returns catalog having an instance of singer Catalog"""
 
-        catalog = discover(mock_client)
+        catalog = discover(mock_client.return_value)
         self.assertIsInstance(catalog, Catalog)

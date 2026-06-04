@@ -30,7 +30,7 @@ def prune_inaccessible_children(schemas, field_metadata, inaccessible_streams):
 def check_stream_access(client: IntercomClient, stream_obj):
     """
     Checks if the stream is accessible with the provided credentials by making a test API call to the endpoint.
-    If the stream is not accessible, then raises an exception which will be caught in the main function and logged.
+    Returns True if the stream is accessible, False if not (catches IntercomError internally and logs it).
     """
     stream_name = stream_obj.tap_stream_id
 
@@ -49,7 +49,7 @@ def check_stream_access(client: IntercomClient, stream_obj):
         return True
 
     if probe_http_method == "POST":  # Update the json with the probe_search_query
-        json_body = stream_obj.probe_search_query
+        json_body = getattr(stream_obj, 'probe_search_query', {})
 
     try:
         LOGGER.info("Checking access for stream: {}".format(stream_name))

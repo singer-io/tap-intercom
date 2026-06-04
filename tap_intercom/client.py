@@ -329,6 +329,6 @@ class IntercomClient(object):
         return self.get(path, **kwargs)
 
     def probe_stream(self, path, http_method='GET', **kwargs):
-        if http_method == 'POST':
+        if http_method.upper() == 'POST':
             return self.post(path, **kwargs)
         return self.get(path, **kwargs)
