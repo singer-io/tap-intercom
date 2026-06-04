@@ -6,6 +6,7 @@ from parameterized import parameterized
 from tap_intercom.client import (IntercomClient, IntercomError,
                                  IntercomForbiddenError, IntercomNotFoundError,
                                  IntercomRequestTimeoutError,
+                                 IntercomScrollExistsError,
                                  IntercomUnauthorizedError)
 from tap_intercom.schema import (check_stream_access, get_schemas,
                                  prune_inaccessible_children)
@@ -171,6 +172,40 @@ class TestCheckStreamAccess(unittest.TestCase):
         result = check_stream_access(self.client, stream_obj)
 
         self.assertFalse(result)
+
+    # -------------------------------------------------------------------
+    # scroll_exists (400) must return True — endpoint is reachable
+    # -------------------------------------------------------------------
+
+    @mock.patch('tap_intercom.client.IntercomClient.probe_stream')
+    def test_scroll_exists_error_returns_true(self, mock_probe):
+        """
+        IntercomScrollExistsError means a scroll session is already open,
+        which proves the endpoint is reachable. Must return True, not False.
+        """
+        mock_probe.side_effect = IntercomScrollExistsError(
+            'HTTP-error-code: 400, Error:scroll already exists '
+            'for this workspace, Error_Code:scroll_exists'
+        )
+        stream_obj = _make_stream_obj('companies', 'companies/scroll')
+
+        result = check_stream_access(self.client, stream_obj)
+
+        self.assertTrue(result)
+
+    @mock.patch('tap_intercom.schema.LOGGER')
+    @mock.patch('tap_intercom.client.IntercomClient.probe_stream')
+    def test_scroll_exists_logs_info_not_error(self, mock_probe, mock_logger):
+        """scroll_exists must log at INFO level, not ERROR."""
+        mock_probe.side_effect = IntercomScrollExistsError(
+            'HTTP-error-code: 400, Error_Code:scroll_exists'
+        )
+        stream_obj = _make_stream_obj('companies', 'companies/scroll')
+
+        check_stream_access(self.client, stream_obj)
+
+        mock_logger.error.assert_not_called()
+        mock_logger.info.assert_called()
 
     # -------------------------------------------------------------------
     # Parameterized: correct log level emitted
