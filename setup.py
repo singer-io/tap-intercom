@@ -10,7 +10,7 @@ setup(name='tap-intercom',
       py_modules=['tap_intercom'],
       install_requires=[
           'backoff==2.2.1',
-          'requests==2.32.4',
+          'requests==2.33.0',
           'singer-python==6.0.1'
       ],
       entry_points='''
