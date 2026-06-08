@@ -3,7 +3,9 @@ import os
 
 from singer import get_logger, metadata
 
-from tap_intercom.client import IntercomClient, IntercomError, IntercomScrollExistsError
+from tap_intercom.client import (IntercomClient, IntercomForbiddenError,
+                                 IntercomScrollExistsError,
+                                 IntercomUnauthorizedError)
 from tap_intercom.streams import STREAMS
 
 LOGGER = get_logger()
@@ -56,12 +58,14 @@ def check_stream_access(client: IntercomClient, stream_obj):
         client.probe_stream(path, http_method=probe_http_method, params=params, json=json_body)
         LOGGER.info("Stream {} is accessible".format(stream_name))
         return True
+
     except IntercomScrollExistsError:
         # A scroll_exists error means a prior scroll session is still open for this workspace.
         # The endpoint itself is reachable and the stream is accessible — treat as success.
         LOGGER.info("Stream {} is accessible (scroll already exists for workspace).".format(stream_name))
         return True
-    except IntercomError as e:
+
+    except (IntercomForbiddenError, IntercomUnauthorizedError) as e:
         LOGGER.error("Stream {} is not accessible. Error: {}".format(stream_name, str(e)))
         return False
 
@@ -130,7 +134,7 @@ def get_schemas(client: IntercomClient):
     if not schemas:  # Raise error if none of the streams were added in schemas.
         error_msg = "No accessible streams found with the provided credentials. Please check the configuration."
         LOGGER.error(error_msg)
-        raise IntercomError(error_msg)
+        raise IntercomForbiddenError(error_msg)
 
     if inaccessible_streams:
         LOGGER.warning("The following streams were found to be inaccessible and have been excluded: {}".format(", ".join(inaccessible_streams)))

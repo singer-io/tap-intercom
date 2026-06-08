@@ -153,19 +153,13 @@ class TestCheckStreamAccess(unittest.TestCase):
         ['401_unauthorized',
          IntercomUnauthorizedError, 'HTTP-error-code: 401', 'contacts'],
         ['403_forbidden',
-         IntercomForbiddenError, 'HTTP-error-code: 403', 'companies'],
-        ['404_not_found',
-         IntercomNotFoundError, 'HTTP-error-code: 404', 'segments'],
-        ['408_request_timeout',
-         IntercomRequestTimeoutError, 'HTTP-error-code: 408', 'teams'],
-        ['generic_intercom_error',
-         IntercomError, 'some permission error', 'tags'],
+         IntercomForbiddenError, 'HTTP-error-code: 403', 'companies']
     ])
     @mock.patch('tap_intercom.client.IntercomClient.probe_stream')
     def test_error_returns_false(
         self, _name, exc_class, exc_msg, stream_name, mock_probe
     ):
-        """Any IntercomError (or subclass) -> returns False, never re-raised."""
+        """Only IntercomForbiddenError and IntercomUnauthorizedError are handled to raise error"""
         mock_probe.side_effect = exc_class(exc_msg)
         stream_obj = _make_stream_obj(stream_name, stream_name)
 
