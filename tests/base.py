@@ -82,7 +82,6 @@ class IntercomBaseTest(unittest.TestCase):
             "admins": {
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.FULL_TABLE,
-                self.EXPECTED_PARENT_STREAM: "admin_list",
                 self.OBEYS_START_DATE : False
             },
             "companies": {

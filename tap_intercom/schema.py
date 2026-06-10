@@ -41,8 +41,11 @@ def get_schemas():
 
             mdata = metadata.to_map(mdata)
             # Check if the stream has any parent attribute
+            # Only set parent-tap-stream-id if the parent stream is itself replicated.
+            # Streams like AdminList have to_replicate=False and are internal helpers with no schema,
+            # so they should not be surfaced as a parent-tap-stream-id in catalog metadata.
             parent_class = getattr(stream_object, 'parent', None)
-            if parent_class and hasattr(parent_class, 'tap_stream_id'):
+            if parent_class and hasattr(parent_class, 'tap_stream_id') and getattr(parent_class, 'to_replicate', True):
                 parent_tap_stream_id = parent_class.tap_stream_id
                 mdata = metadata.write(mdata, (), 'parent-tap-stream-id', parent_tap_stream_id)
 
