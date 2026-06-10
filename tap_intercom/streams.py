@@ -274,7 +274,7 @@ class IncrementalStream(BaseStream):
                         continue
                     state = child_stream_obj.sync_substream(record.get('id'), child_schema, child_metadata, record[self.replication_key], state)
 
-                if record_counter == MAX_PAGE_SIZE:
+                if record_counter >= MAX_PAGE_SIZE:
                     self.write_intermediate_bookmark(state, record.get("id"), max_datetime)
                     # Reset counter
                     record_counter = 0
