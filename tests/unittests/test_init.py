@@ -2,7 +2,7 @@ import unittest
 from unittest import mock
 from tap_intercom import main
 from parameterized import parameterized
-from tap_intercom import discover
+from tap_intercom.discover import discover
 from singer.catalog import Catalog
 
 
@@ -27,7 +27,7 @@ class TestIntercomInit(unittest.TestCase):
         ["discover_and_sync_called", [False, False], [True, True]]
     ])
     @mock.patch('singer.utils.parse_args')
-    @mock.patch('tap_intercom.discover')
+    @mock.patch('tap_intercom._discover')
     @mock.patch('tap_intercom.sync')
     def test_init(self, test_name, test_data, exp, mock_sync, mock_discover, mock_args, mock_client):
         """Test init file for different flag scenarios"""

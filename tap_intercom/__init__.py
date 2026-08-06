@@ -4,7 +4,7 @@ import singer
 from singer import utils
 
 from tap_intercom.client import IntercomClient
-from tap_intercom.discover import discover
+from tap_intercom.discover import discover as _discover
 from tap_intercom.sync import sync
 
 LOGGER = singer.get_logger()
@@ -19,7 +19,7 @@ REQUIRED_CONFIG_KEYS = [
 def do_discover(client: IntercomClient):
 
     LOGGER.info('Starting discover')
-    catalog = discover(client=client)
+    catalog = _discover(client=client)
     catalog.dump()
     LOGGER.info('Finished discover')
 
@@ -46,8 +46,9 @@ def main():
             if parsed_args.catalog:
                 catalog = parsed_args.catalog
             else:
-                catalog = discover(client=client)
+                catalog = _discover(client=client)
             sync(parsed_args.config, parsed_args.state, catalog)
 
-if __name__ == '__main__':
+
+if __name__ == '__main__':  # pragma: no cover
     main()
