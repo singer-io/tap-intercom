@@ -96,3 +96,40 @@ class TestParentChildWriteRecords(unittest.TestCase):
         conversations.sync(state={}, stream_schema={}, stream_metadata={}, config=config, transformer=None)
         self.assertEqual(mocked_transform.call_count, 1)
         self.assertEqual(mocked_sync_substream.call_count, 1)
+
+
+class TestSkipRecordsBranch(unittest.TestCase):
+    """Covers skip_records=True path (skipped_parent_ids.append + continue)."""
+
+    @mock.patch('singer.write_schema')
+    @mock.patch('tap_intercom.streams.BaseStream.sync_substream')
+    @mock.patch('tap_intercom.streams.transform', side_effect=transform)
+    @mock.patch('tap_intercom.streams.Conversations.get_records')
+    def test_skip_records_appends_to_skipped_ids(
+        self, mocked_get_records, mocked_transform, mocked_sync_substream, mocked_write_schema
+    ):
+        """When last_processed is set, records with id <= last_processed are skipped."""
+        skipped_id = 'conv-05'
+        last_proc = 'conv-10'
+        mocked_get_records.return_value = [
+            {'id': skipped_id, 'updated_at': 1640636000000},
+        ]
+        client = IntercomClient('test_access_token', 300)
+        state = {
+            'bookmarks': {
+                'conversations': {'last_processed': last_proc},
+                'conversation_parts': {},
+            }
+        }
+        conversations = Conversations(
+            client=client,
+            catalog=Catalog(['conversations', 'conversation_parts']),
+            selected_streams=['conversations', 'conversation_parts'],
+        )
+        conversations.sync(
+            state=state, stream_schema={}, stream_metadata={},
+            config={'start_date': '2021-01-01'}, transformer=None,
+        )
+        self.assertIn(
+            (skipped_id, 1640636000000), conversations.skipped_parent_ids
+        )

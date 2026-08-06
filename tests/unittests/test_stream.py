@@ -169,7 +169,6 @@ class TestBaseStreamCoverage(unittest.TestCase):
         result = list(stream.get_records(is_parent=True))
         self.assertEqual(result, ['a1', 'a2'])
 
-
     @mock.patch('tap_intercom.client.IntercomClient.get')
     def test_companies_get_records_pagination(self, mocked_get):
         """Companies.get_records follows scroll_param pages."""
@@ -271,3 +270,59 @@ class TestContactsPagination(unittest.TestCase):
         bookmark = singer.utils.strptime_to_utc('2022-01-01T00:00:00Z')
         result = list(stream.get_records(bookmark_datetime=bookmark, stream_metadata={}))
         self.assertEqual(len(result), 2)
+
+
+class TestSyncSubstreamInnerLoop(unittest.TestCase):
+    """sync_substream inner loop (lines 191-198) needs actual conv parts in response."""
+
+    base_client = IntercomClient("test", "300")
+
+    @mock.patch('singer.write_state')
+    @mock.patch('singer.write_bookmark', side_effect=singer.write_bookmark)
+    @mock.patch('singer.write_record')
+    @mock.patch('tap_intercom.client.IntercomClient.get')
+    def test_sync_substream_with_actual_parts(self, mocked_get, mock_write_record, _wb, _ws):
+        """sync_substream writes records when response contains conversation_parts."""
+        mocked_get.return_value = {
+            'id': 'conv-1',
+            'created_at': 1640636000000,
+            'updated_at': 1640636000000,
+            'conversation_parts': {
+                'conversation_parts': [
+                    {'id': 'part-1', 'updated_at': 1640636000000,
+                     'author': {}, 'body': 'hi'},
+                ],
+            },
+        }
+        stream = ConversationParts(self.base_client, None, [])
+        state = {'bookmarks': {}}
+        stream.sync_substream('conv-1', {}, {}, 1640636000000, state)
+        self.assertGreater(mock_write_record.call_count, 0)
+
+
+class TestAdminsGetParentData(unittest.TestCase):
+
+    base_client = IntercomClient("test", "300")
+
+    @mock.patch('tap_intercom.client.IntercomClient.get')
+    def test_get_parent_data_calls_admin_list(self, mocked_get):
+        """Admins.get_parent_data delegates to AdminList.get_records(is_parent=True)."""
+        mocked_get.return_value = {'admins': [{'id': 'a1'}, {'id': 'a2'}]}
+        stream = Admins(self.base_client, None, [])
+        result = list(stream.get_parent_data())
+        self.assertEqual(result, ['a1', 'a2'])
+
+
+class TestCompaniesNullDataWarning(unittest.TestCase):
+
+    base_client = IntercomClient("test", "300")
+
+    @mock.patch('tap_intercom.streams.LOGGER')
+    @mock.patch('tap_intercom.client.IntercomClient.get')
+    def test_null_data_key_logs_warning(self, mocked_get, mock_logger):
+        """Companies.get_records logs a warning when data key is absent from response."""
+        # Empty response → data key missing → warning; then NotFound to stop loop
+        mocked_get.side_effect = [{}, IntercomNotFoundError()]
+        stream = Companies(self.base_client, None, [])
+        list(stream.get_records())
+        mock_logger.warning.assert_called()

@@ -82,3 +82,38 @@ class TestMethods(unittest.TestCase):
 
         self.intercom_client.perform('POST','path')
         self.assertEqual(mocked_post_request.call_count,1)
+
+
+class TestProbeStreamAndMethods(unittest.TestCase):
+
+    intercom_client = IntercomClient(config_request_timeout="", access_token="test_token")
+
+    @mock.patch("tap_intercom.client.IntercomClient.get")
+    @mock.patch("tap_intercom.client.IntercomClient.post")
+    def test_probe_stream_calls_get_by_default(self, mock_post, mock_get):
+        self.intercom_client.probe_stream('path')
+        mock_get.assert_called_once()
+        mock_post.assert_not_called()
+
+    @mock.patch("tap_intercom.client.IntercomClient.get")
+    @mock.patch("tap_intercom.client.IntercomClient.post")
+    def test_probe_stream_calls_post_for_post_method(self, mock_post, mock_get):
+        self.intercom_client.probe_stream('path', http_method='POST')
+        mock_post.assert_called_once()
+        mock_get.assert_not_called()
+
+    @mock.patch("requests.Session.request")
+    def test_get_method_delegates_to_request(self, mock_request):
+        mock_request.return_value = get_mock_http_response(200, json.dumps({'type': ''}))
+        client = IntercomClient(config_request_timeout="", access_token="test_token")
+        client._IntercomClient__verified = True
+        client.get('test_path')
+        self.assertEqual(mock_request.call_args[0][0], 'GET')
+
+    @mock.patch("requests.Session.request")
+    def test_post_method_delegates_to_request(self, mock_request):
+        mock_request.return_value = get_mock_http_response(200, json.dumps({'type': ''}))
+        client = IntercomClient(config_request_timeout="", access_token="test_token")
+        client._IntercomClient__verified = True
+        client.post('test_path', json={})
+        self.assertEqual(mock_request.call_args[0][0], 'POST')
