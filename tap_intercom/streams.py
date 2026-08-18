@@ -53,9 +53,9 @@ class BaseStream:
         if parent_record_id is not None:
             path = obj.path.format(parent_record_id)
         else:
-            path = obj.path
+            path = getattr(obj, 'probe_path', obj.path)
 
-        params = getattr(obj, 'params', {})
+        params = getattr(obj, 'probe_params', getattr(obj, 'params', {}))
         json_body = {}
 
         probe_http_method = getattr(obj, 'probe_http_method', 'GET').upper()
@@ -89,7 +89,16 @@ class BaseStream:
                     json=json_body,
                 )
                 if hasattr(parent_obj, 'data_key') and parent_obj.data_key is not None:
-                    record = record.get(parent_obj.data_key)[0]
+                    data_list = record.get(parent_obj.data_key)
+                    if not data_list:
+                        # Parent is reachable but empty; child access cannot be verified.
+                        LOGGER.warning(
+                            "Parent stream %s returned no records; assuming child stream %s is accessible.",
+                            parent_obj.tap_stream_id, self.tap_stream_id
+                        )
+                        return True
+
+                    record = data_list[0]
 
                 parent_record_id = record.get('id')
             except (IntercomForbiddenError, IntercomUnauthorizedError) as exc:
@@ -516,6 +525,9 @@ class Companies(IncrementalStream):
     replication_key = 'updated_at'
     valid_replication_keys = ['updated_at']
     data_key = 'data'
+    # Probe the plain list endpoint so discovery doesn't open a scroll session.
+    probe_path = 'companies'
+    probe_params = {'page': 1, 'per_page': 1}
 
     def get_records(self, bookmark_datetime=None, is_parent=False, stream_metadata=None) -> Iterator[list]:
         scrolling = True

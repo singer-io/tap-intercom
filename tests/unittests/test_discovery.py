@@ -264,9 +264,91 @@ class TestBaseStreamCheckAccess(unittest.TestCase):
         mock_logger.error.assert_not_called()
         mock_logger.info.assert_called()
 
+    # --- empty parent data list returns True without IndexError ------------
+
+    @mock.patch('tap_intercom.client.IntercomClient.probe_stream')
+    def test_child_stream_returns_true_when_parent_data_empty(self, mock_probe):
+        """Parent reachable but empty data list → True, no IndexError raised."""
+        mock_probe.return_value = {Conversations.data_key: []}
+        result = ConversationParts(client=self.client).check_access()
+        self.assertTrue(result)
+        # Child probe must be skipped entirely.
+        mock_probe.assert_called_once()
+
+    @mock.patch('tap_intercom.streams.LOGGER')
+    @mock.patch('tap_intercom.client.IntercomClient.probe_stream')
+    def test_child_stream_warns_when_parent_data_empty(self, mock_probe, mock_logger):
+        """WARNING must be logged when parent probe returns an empty records list."""
+        mock_probe.return_value = {Conversations.data_key: []}
+        ConversationParts(client=self.client).check_access()
+        mock_logger.warning.assert_called()
+
+    # --- Companies probes the non-scroll list endpoint ---------------------
+
+    @mock.patch('tap_intercom.client.IntercomClient.probe_stream')
+    def test_companies_check_access_probes_non_scroll_path(self, mock_probe):
+        """Companies.check_access must not hit companies/scroll during discovery."""
+        mock_probe.return_value = {'data': [{'id': 'c1'}]}
+        Companies(client=self.client).check_access()
+        call_path = mock_probe.call_args[0][0]
+        self.assertEqual(call_path, Companies.probe_path)
+        self.assertNotEqual(call_path, Companies.path)
+
+    @mock.patch('tap_intercom.client.IntercomClient.probe_stream')
+    def test_companies_check_access_uses_probe_params(self, mock_probe):
+        """Companies probe must send probe_params, not the scroll params."""
+        mock_probe.return_value = {'data': [{'id': 'c1'}]}
+        Companies(client=self.client).check_access()
+        self.assertEqual(mock_probe.call_args[1]['params'], Companies.probe_params)
+
 
 # ---------------------------------------------------------------------------
-# 2.  _prune_inaccessible_children()
+# 2.  get_probe_data() — probe_path / probe_params support
+# ---------------------------------------------------------------------------
+
+class TestGetProbeData(unittest.TestCase):
+    """Tests for BaseStream.get_probe_data() probe_path/probe_params fallback."""
+
+    def setUp(self):
+        self.client = IntercomClient(
+            access_token='test_token', config_request_timeout=''
+        )
+
+    def test_probe_path_takes_precedence_over_path(self):
+        """When probe_path is defined it is used instead of path."""
+        stream = Companies(client=self.client)
+        path, _, _, _ = stream.get_probe_data(stream)
+        self.assertEqual(path, Companies.probe_path)
+        self.assertNotEqual(path, Companies.path)
+
+    def test_probe_params_take_precedence_over_params(self):
+        """When probe_params is defined it is used instead of params."""
+        stream = Companies(client=self.client)
+        _, params, _, _ = stream.get_probe_data(stream)
+        self.assertEqual(params, Companies.probe_params)
+
+    def test_falls_back_to_path_when_probe_path_absent(self):
+        """Streams without probe_path fall back to path."""
+        stream = Tags(client=self.client)
+        path, _, _, _ = stream.get_probe_data(stream)
+        self.assertEqual(path, Tags.path)
+
+    def test_falls_back_to_params_when_probe_params_absent(self):
+        """Streams without probe_params fall back to params."""
+        stream = Tags(client=self.client)
+        _, params, _, _ = stream.get_probe_data(stream)
+        self.assertEqual(params, Tags.params)
+
+    def test_parent_record_id_uses_formatted_path_not_probe_path(self):
+        """When parent_record_id is given, path.format() is used — probe_path is ignored."""
+        stream = ConversationParts(client=self.client)
+        parent_id = 'conv-999'
+        path, _, _, _ = stream.get_probe_data(stream, parent_record_id=parent_id)
+        self.assertEqual(path, ConversationParts.path.format(parent_id))
+
+
+# ---------------------------------------------------------------------------
+# 4.  _prune_inaccessible_children()
 # ---------------------------------------------------------------------------
 
 class TestPruneInaccessibleChildren(unittest.TestCase):
@@ -366,7 +448,7 @@ class TestPruneInaccessibleChildren(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# 3.  _apply_access_checks()
+# 5.  _apply_access_checks()
 # ---------------------------------------------------------------------------
 
 class TestApplyAccessChecks(unittest.TestCase):
@@ -482,7 +564,7 @@ class TestApplyAccessChecks(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# 4.  discover()
+# 6.  discover()
 # ---------------------------------------------------------------------------
 
 class TestDiscover(unittest.TestCase):
