@@ -1,13 +1,19 @@
-import os
 import json
-from singer import metadata
+import os
+
+from singer import get_logger, metadata
+
 from tap_intercom.streams import STREAMS
+
+LOGGER = get_logger()
 
 # Reference:
 # https://github.com/singer-io/getting-started/blob/master/docs/DISCOVERY_MODE.md#Metadata
 
+
 def get_abs_path(path):
     return os.path.join(os.path.dirname(os.path.realpath(__file__)), path)
+
 
 def get_schemas():
     """
@@ -21,8 +27,7 @@ def get_schemas():
     field_metadata = {}
 
     for stream_name, stream_object in STREAMS.items():
-        replication_ind = stream_object.to_replicate
-        if replication_ind:
+        if stream_object.to_replicate:
             schema_path = get_abs_path('schemas/{}.json'.format(stream_name))
             with open(schema_path) as file:
                 schema = json.load(file)
@@ -45,9 +50,13 @@ def get_schemas():
             # Streams like AdminList have to_replicate=False and are internal helpers with no schema,
             # so they should not be surfaced as a parent-tap-stream-id in catalog metadata.
             parent_class = getattr(stream_object, 'parent', None)
-            if parent_class and hasattr(parent_class, 'tap_stream_id') and getattr(parent_class, 'to_replicate', True):
+            if (parent_class
+                    and hasattr(parent_class, 'tap_stream_id')
+                    and getattr(parent_class, 'to_replicate', True)):
                 parent_tap_stream_id = parent_class.tap_stream_id
-                mdata = metadata.write(mdata, (), 'parent-tap-stream-id', parent_tap_stream_id)
+                mdata = metadata.write(
+                    mdata, (), 'parent-tap-stream-id', parent_tap_stream_id
+                )
 
             if stream_object.replication_key:
                 mdata = metadata.write(

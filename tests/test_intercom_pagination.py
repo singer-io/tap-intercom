@@ -7,7 +7,7 @@ from tap_tester import runner, connections
 
 from base import IntercomBaseTest
 
-class RechargePaginationTest(IntercomBaseTest):
+class IntercomPaginationTest(IntercomBaseTest):
     
     @staticmethod
     def name():

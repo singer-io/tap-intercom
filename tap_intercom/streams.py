@@ -12,7 +12,9 @@ import singer
 from singer import Transformer, metrics, metadata, UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING
 from singer.transform import transform, unix_milliseconds_to_datetime
 
-from tap_intercom.client import (IntercomClient, IntercomError, IntercomNotFoundError)
+from tap_intercom.client import (IntercomClient, IntercomError, IntercomNotFoundError,
+                                 IntercomForbiddenError, IntercomUnauthorizedError,
+                                 IntercomScrollExistsError)
 from tap_intercom.transform import (transform_json, transform_times, find_datetimes_in_schema)
 
 LOGGER = singer.get_logger()
@@ -38,10 +40,92 @@ class BaseStream:
     data_key = None
     child = None
 
-    def __init__(self, client: IntercomClient, catalog, selected_streams):
+    def __init__(self, client: IntercomClient = None,
+                 catalog=None, selected_streams=None):
         self.client = client
         self.catalog = catalog
         self.selected_streams = selected_streams
+
+    def get_probe_data(self, obj, parent_record_id=None):
+        """
+            Prepares and returns data/params required to probe a stream
+        """
+        if parent_record_id is not None:
+            path = obj.path.format(parent_record_id)
+        else:
+            path = obj.path
+
+        params = getattr(obj, 'params', {})
+        json_body = {}
+
+        probe_http_method = getattr(obj, 'probe_http_method', 'GET').upper()
+        if probe_http_method == 'POST':
+            json_body = getattr(obj, 'probe_search_query', {})
+
+        return path, params, probe_http_method, json_body
+
+    def check_access(self) -> bool:
+        """
+        Verify that the API credentials have read access to this stream.
+
+        Returns True if the stream is accessible.
+        Returns False only on HTTP 401 (Unauthorized) or 403 (Forbidden).
+        A scroll_exists (400) response is treated as accessible because it
+        proves a prior successful scroll session was open for this workspace.
+        All other errors propagate so that backoff/retry can handle them.
+        """
+        parent_record_id = None
+
+        if self.parent is not None:
+            # Get a record from parent
+            parent_obj = self.parent
+            path, params, probe_http_method, json_body = self.get_probe_data(parent_obj)
+
+            try:
+                record = self.client.probe_stream(
+                    path,
+                    http_method=probe_http_method,
+                    params=params,
+                    json=json_body,
+                )
+                if hasattr(parent_obj, 'data_key') and parent_obj.data_key is not None:
+                    record = record.get(parent_obj.data_key)[0]
+
+                parent_record_id = record.get('id')
+            except (IntercomForbiddenError, IntercomUnauthorizedError) as exc:
+                LOGGER.warning(
+                    "Parent Stream %s is not accessible. Error: %s",
+                    parent_obj.tap_stream_id, str(exc)
+                )
+                return False
+
+        path, params, probe_http_method, json_body = self.get_probe_data(self, parent_record_id=parent_record_id)
+
+        try:
+            LOGGER.info("Checking access for stream: %s", self.tap_stream_id)
+            self.client.probe_stream(
+                path,
+                http_method=probe_http_method,
+                params=params,
+                json=json_body,
+            )
+            LOGGER.info("Stream %s is accessible", self.tap_stream_id)
+            return True
+        except IntercomScrollExistsError:
+            # scroll_exists means a prior scroll session is still open.
+            # The endpoint is reachable — treat as accessible.
+            LOGGER.info(
+                "Stream %s is accessible "
+                "(scroll already exists for workspace).",
+                self.tap_stream_id
+            )
+            return True
+        except (IntercomForbiddenError, IntercomUnauthorizedError) as exc:
+            LOGGER.warning(
+                "Stream %s is not accessible. Error: %s",
+                self.tap_stream_id, str(exc)
+            )
+            return False
 
     def get_records(self, bookmark_datetime: datetime = None, is_parent: bool = False, stream_metadata=None) -> list:
         """
@@ -548,6 +632,18 @@ class Conversations(IncrementalStream):
     per_page = MAX_PAGE_SIZE
     child = 'conversation_parts'
 
+    probe_http_method = "POST"
+    probe_search_query = {
+        "pagination": {
+            "per_page": 1
+        },
+        "query": {
+            "field": "id",
+            "operator": "!=",
+            "value": None
+        }
+    }
+
     def set_last_processed(self, state):
         self.last_processed = singer.get_bookmark(
             state, self.tap_stream_id, "last_processed")
@@ -724,6 +820,18 @@ class Contacts(IncrementalStream):
     # addressable_list_fields = ['tags', 'notes', 'companies']
     addressable_list_fields = ['tags', 'companies']
     to_write_intermediate_bookmark = True
+
+    probe_http_method = "POST"
+    probe_search_query = {
+        "pagination": {
+            "per_page": 1
+        },
+        "query": {
+            "field": "id",
+            "operator": "!=",
+            "value": None
+        }
+    }
 
     def get_addressable_list(self, contact_list: dict, stream_metadata: dict) -> dict:
         params = {
