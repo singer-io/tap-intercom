@@ -260,6 +260,49 @@ class IncrementalStream(BaseStream):
                                           singer.utils.strftime(bookmark_value))
             singer.write_state(state)
 
+    def _setup_child_stream(self, state, config, parent_bookmark_utc):
+        """
+        Initialises child stream context for a parent stream that has a child.
+
+        Returns a tuple of:
+            (sync_start_date, is_parent_selected, is_child_selected,
+             child_bookmark_ts, child_stream_obj, child_schema, child_metadata)
+        """
+        child_stream = STREAMS.get(self.child)
+        child_bookmark = singer.get_bookmark(state, child_stream.tap_stream_id, self.replication_key, config['start_date'])
+        child_bookmark_utc = singer.utils.strptime_to_utc(child_bookmark)
+        child_bookmark_ts = child_bookmark_utc.timestamp() * 1000
+
+        is_parent_selected = self.tap_stream_id in self.selected_streams
+        is_child_selected = child_stream.tap_stream_id in self.selected_streams
+
+        if is_parent_selected and is_child_selected:
+            sync_start_date = min(parent_bookmark_utc, child_bookmark_utc)
+        elif is_child_selected:
+            sync_start_date = child_bookmark_utc
+        else:
+            sync_start_date = parent_bookmark_utc
+
+        child_stream_obj = child_stream(self.client, self.catalog, self.selected_streams)
+        child_schema = {}
+        child_metadata = None
+        child_stream_ = self.catalog.get_stream(child_stream.tap_stream_id)
+        if child_stream_ is None:
+            # Child stream is not in the catalog (e.g. excluded due to access restrictions)
+            is_child_selected = False
+        else:
+            child_schema = child_stream_.schema.to_dict()
+            child_metadata = metadata.to_map(child_stream_.metadata)
+            if is_child_selected:
+                singer.write_schema(
+                    child_stream.tap_stream_id,
+                    child_schema,
+                    child_stream.key_properties,
+                    child_stream.replication_key
+                )
+
+        return sync_start_date, is_parent_selected, is_child_selected, child_bookmark_ts, child_stream_obj, child_schema, child_metadata
+
     # Disabled `unused-argument` as it causing pylint error.
     # Method which call this `sync` method is passing unused argument.So, removing argument would not work.
     # pylint: disable=too-many-arguments,unused-argument
@@ -281,8 +324,6 @@ class IncrementalStream(BaseStream):
 
         # Check if the current stream has child stream or not
         has_child = self.child is not None
-        # Child stream class
-        child_stream = STREAMS.get(self.child)
 
         # Get current stream bookmark
         parent_bookmark = singer.get_bookmark(state, self.tap_stream_id, self.replication_key, config['start_date'])
@@ -298,39 +339,18 @@ class IncrementalStream(BaseStream):
         # And update the sync start date to minimum of parent bookmark or child bookmark
         child_bookmark_ts = None
         child_stream_obj = None
+        child_schema = {}
         child_metadata = None
         if has_child:
-            child_bookmark = singer.get_bookmark(state, child_stream.tap_stream_id, self.replication_key, config['start_date'])
-            child_bookmark_utc = singer.utils.strptime_to_utc(child_bookmark)
-            child_bookmark_ts = child_bookmark_utc.timestamp() * 1000
-
-            is_parent_selected = self.tap_stream_id in self.selected_streams
-            is_child_selected = child_stream.tap_stream_id in self.selected_streams
-
-            if is_parent_selected and is_child_selected:
-                sync_start_date = min(parent_bookmark_utc, child_bookmark_utc)
-            elif is_parent_selected:
-                sync_start_date = parent_bookmark_utc
-            elif is_child_selected:
-                sync_start_date = singer.utils.strptime_to_utc(child_bookmark)
-
-            # Create child stream object and generate schema
-            child_stream_obj = child_stream(self.client, self.catalog, self.selected_streams)
-            child_stream_ = self.catalog.get_stream(child_stream.tap_stream_id)
-            if child_stream_ is None:
-                # Child stream is not in the catalog (e.g. excluded due to access restrictions)
-                is_child_selected = False
-            else:
-                child_schema = child_stream_.schema.to_dict()
-                child_metadata = metadata.to_map(child_stream_.metadata)
-                if is_child_selected:
-                    # Write schema for child stream as it will be synced by the parent stream
-                    singer.write_schema(
-                        child_stream.tap_stream_id,
-                        child_schema,
-                        child_stream.key_properties,
-                        child_stream.replication_key
-                    )
+            (
+                sync_start_date,
+                is_parent_selected,
+                is_child_selected,
+                child_bookmark_ts,
+                child_stream_obj,
+                child_schema,
+                child_metadata,
+            ) = self._setup_child_stream(state, config, parent_bookmark_utc)
 
         LOGGER.info("Stream: {}, initial max_bookmark_value: {}".format(self.tap_stream_id, sync_start_date))
         max_datetime = sync_start_date
