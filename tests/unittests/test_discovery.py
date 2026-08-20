@@ -68,11 +68,11 @@ class TestBaseStreamCheckAccess(unittest.TestCase):
 
     # --- child streams probe parent then themselves ------------------------
 
-    @mock.patch('tap_intercom.client.IntercomClient.probe_stream')
-    def test_child_stream_probes_parent_then_self(self, mock_probe):
+    @mock.patch('tap_intercom.client.IntercomClient.perform')
+    def test_child_stream_probes_parent_then_self(self, mock_perform):
         """Child stream probes parent first (to get an id) then probes itself."""
         parent_id = 'conv-abc'
-        mock_probe.side_effect = [
+        mock_perform.side_effect = [
             {Conversations.data_key: [{'id': parent_id}]},  # parent probe
             {},                                              # child probe
         ]
@@ -80,43 +80,43 @@ class TestBaseStreamCheckAccess(unittest.TestCase):
         result = stream.check_access()
 
         self.assertTrue(result)
-        self.assertEqual(mock_probe.call_count, 2)
+        self.assertEqual(mock_perform.call_count, 2)
         # First call uses parent (Conversations) path and POST method
-        first_args = mock_probe.call_args_list[0]
-        self.assertEqual(first_args[0][0], Conversations.path)
-        self.assertEqual(first_args[1]['http_method'], 'POST')
+        first_args = mock_perform.call_args_list[0]
+        self.assertEqual(first_args[0][0], 'POST')
+        self.assertEqual(first_args[0][1], Conversations.path)
         # Second call uses child path formatted with parent id
-        second_args = mock_probe.call_args_list[1]
-        self.assertIn(parent_id, second_args[0][0])
-        self.assertEqual(second_args[1]['http_method'], 'GET')
+        second_args = mock_perform.call_args_list[1]
+        self.assertEqual(second_args[0][0], 'GET')
+        self.assertIn(parent_id, second_args[0][1])
 
-    @mock.patch('tap_intercom.client.IntercomClient.probe_stream')
-    def test_child_stream_returns_false_when_parent_forbidden(self, mock_probe):
+    @mock.patch('tap_intercom.client.IntercomClient.perform')
+    def test_child_stream_returns_false_when_parent_forbidden(self, mock_perform):
         """403 on parent probe → False without probing child."""
-        mock_probe.side_effect = IntercomForbiddenError('HTTP-error-code: 403')
+        mock_perform.side_effect = IntercomForbiddenError('HTTP-error-code: 403')
         stream = ConversationParts(client=self.client)
 
         result = stream.check_access()
 
         self.assertFalse(result)
-        mock_probe.assert_called_once()  # only parent probe was attempted
+        mock_perform.assert_called_once()  # only parent probe was attempted
 
-    @mock.patch('tap_intercom.client.IntercomClient.probe_stream')
-    def test_child_stream_returns_false_when_parent_unauthorized(self, mock_probe):
+    @mock.patch('tap_intercom.client.IntercomClient.perform')
+    def test_child_stream_returns_false_when_parent_unauthorized(self, mock_perform):
         """401 on parent probe → False without probing child."""
-        mock_probe.side_effect = IntercomUnauthorizedError('HTTP-error-code: 401')
+        mock_perform.side_effect = IntercomUnauthorizedError('HTTP-error-code: 401')
         stream = ConversationParts(client=self.client)
 
         result = stream.check_access()
 
         self.assertFalse(result)
-        mock_probe.assert_called_once()
+        mock_perform.assert_called_once()
 
-    @mock.patch('tap_intercom.client.IntercomClient.probe_stream')
-    def test_child_stream_returns_false_when_self_probe_forbidden(self, mock_probe):
+    @mock.patch('tap_intercom.client.IntercomClient.perform')
+    def test_child_stream_returns_false_when_self_probe_forbidden(self, mock_perform):
         """Parent probe succeeds; 403 on child probe → False."""
         parent_id = 'conv-xyz'
-        mock_probe.side_effect = [
+        mock_perform.side_effect = [
             {Conversations.data_key: [{'id': parent_id}]},
             IntercomForbiddenError('HTTP-error-code: 403'),
         ]
@@ -125,13 +125,13 @@ class TestBaseStreamCheckAccess(unittest.TestCase):
         result = stream.check_access()
 
         self.assertFalse(result)
-        self.assertEqual(mock_probe.call_count, 2)
+        self.assertEqual(mock_perform.call_count, 2)
 
-    @mock.patch('tap_intercom.client.IntercomClient.probe_stream')
-    def test_child_stream_parent_without_data_key_uses_record_directly(self, mock_probe):
+    @mock.patch('tap_intercom.client.IntercomClient.perform')
+    def test_child_stream_parent_without_data_key_uses_record_directly(self, mock_perform):
         """When parent has no data_key, the raw probe response is used for id."""
         parent_id = 'raw-id-99'
-        mock_probe.side_effect = [
+        mock_perform.side_effect = [
             {'id': parent_id},  # raw response (no data_key wrapper)
             {},
         ]
@@ -145,51 +145,51 @@ class TestBaseStreamCheckAccess(unittest.TestCase):
             Conversations.data_key = original_data_key
 
         self.assertTrue(result)
-        second_args = mock_probe.call_args_list[1]
-        self.assertIn(parent_id, second_args[0][0])
+        second_args = mock_perform.call_args_list[1]
+        self.assertIn(parent_id, second_args[0][1])
 
     # --- GET stream uses correct probe kwargs ------------------------------
 
-    @mock.patch('tap_intercom.client.IntercomClient.probe_stream')
-    def test_get_stream_probe_called_with_get_method(self, mock_probe):
-        """GET stream: probe_stream is called with http_method='GET'."""
-        mock_probe.return_value = {'type': 'list'}
+    @mock.patch('tap_intercom.client.IntercomClient.perform')
+    def test_get_stream_probe_called_with_get_method(self, mock_perform):
+        """GET stream: perform is called with method='GET'."""
+        mock_perform.return_value = {'type': 'list'}
         stream = Tags(client=self.client)
 
         result = stream.check_access()
 
         self.assertTrue(result)
-        mock_probe.assert_called_once_with(
+        mock_perform.assert_called_once_with(
+            'GET',
             stream.path,
-            http_method='GET',
             params=stream.params,
             json={},
         )
 
     # --- POST stream uses correct probe kwargs -----------------------------
 
-    @mock.patch('tap_intercom.client.IntercomClient.probe_stream')
-    def test_post_stream_probe_called_with_post_method(self, mock_probe):
-        """POST stream: probe_stream called with http_method='POST' and body."""
-        mock_probe.return_value = {'conversations': []}
+    @mock.patch('tap_intercom.client.IntercomClient.perform')
+    def test_post_stream_probe_called_with_post_method(self, mock_perform):
+        """POST stream: perform called with method='POST' and body."""
+        mock_perform.return_value = {'conversations': []}
         stream = Conversations(client=self.client)
 
         result = stream.check_access()
 
         self.assertTrue(result)
-        mock_probe.assert_called_once_with(
+        mock_perform.assert_called_once_with(
+            'POST',
             stream.path,
-            http_method='POST',
             params=stream.params,
             json=stream.probe_search_query,
         )
 
     # --- accessible stream returns True ------------------------------------
 
-    @mock.patch('tap_intercom.client.IntercomClient.probe_stream')
-    def test_accessible_stream_returns_true(self, mock_probe):
+    @mock.patch('tap_intercom.client.IntercomClient.perform')
+    def test_accessible_stream_returns_true(self, mock_perform):
         """Successful probe returns True."""
-        mock_probe.return_value = {'type': 'list'}
+        mock_perform.return_value = {'type': 'list'}
         self.assertTrue(Tags(client=self.client).check_access())
 
     # --- parameterized: auth errors return False ---------------------------
@@ -200,24 +200,24 @@ class TestBaseStreamCheckAccess(unittest.TestCase):
         ['403_forbidden',
          IntercomForbiddenError, 'HTTP-error-code: 403', Companies],
     ])
-    @mock.patch('tap_intercom.client.IntercomClient.probe_stream')
+    @mock.patch('tap_intercom.client.IntercomClient.perform')
     def test_auth_error_returns_false(
-        self, _name, exc_class, exc_msg, stream_cls, mock_probe
+        self, _name, exc_class, exc_msg, stream_cls, mock_perform
     ):
         """HTTP 401 / 403 -> returns False (never re-raised)."""
-        mock_probe.side_effect = exc_class(exc_msg)
+        mock_perform.side_effect = exc_class(exc_msg)
         result = stream_cls(client=self.client).check_access()
         self.assertFalse(result)
 
     # --- scroll_exists treated as accessible -------------------------------
 
-    @mock.patch('tap_intercom.client.IntercomClient.probe_stream')
-    def test_scroll_exists_returns_true(self, mock_probe):
+    @mock.patch('tap_intercom.client.IntercomClient.perform')
+    def test_scroll_exists_returns_true(self, mock_perform):
         """
         scroll_exists (400) proves a prior scroll session was open and the
         endpoint is reachable — must return True.
         """
-        mock_probe.side_effect = IntercomScrollExistsError(
+        mock_perform.side_effect = IntercomScrollExistsError(
             'HTTP-error-code: 400, Error_Code:scroll_exists'
         )
         result = Companies(client=self.client).check_access()
@@ -233,15 +233,15 @@ class TestBaseStreamCheckAccess(unittest.TestCase):
         ['accessible_no_error_log', None, 'error', False],
     ])
     @mock.patch('tap_intercom.streams.LOGGER')
-    @mock.patch('tap_intercom.client.IntercomClient.probe_stream')
+    @mock.patch('tap_intercom.client.IntercomClient.perform')
     def test_log_level(
-        self, _name, exc, log_method, expect_called, mock_probe, mock_logger
+        self, _name, exc, log_method, expect_called, mock_perform, mock_logger
     ):
         """Verify the correct log level is (or is not) triggered."""
         if exc:
-            mock_probe.side_effect = exc
+            mock_perform.side_effect = exc
         else:
-            mock_probe.return_value = {}
+            mock_perform.return_value = {}
 
         Tags(client=self.client).check_access()
 
@@ -252,10 +252,10 @@ class TestBaseStreamCheckAccess(unittest.TestCase):
             logger_fn.assert_not_called()
 
     @mock.patch('tap_intercom.streams.LOGGER')
-    @mock.patch('tap_intercom.client.IntercomClient.probe_stream')
-    def test_scroll_exists_logs_info_not_warning(self, mock_probe, mock_logger):
+    @mock.patch('tap_intercom.client.IntercomClient.perform')
+    def test_scroll_exists_logs_info_not_warning(self, mock_perform, mock_logger):
         """scroll_exists must log at INFO level only — no WARNING or ERROR."""
-        mock_probe.side_effect = IntercomScrollExistsError(
+        mock_perform.side_effect = IntercomScrollExistsError(
             'HTTP-error-code: 400, Error_Code:scroll_exists'
         )
         Companies(client=self.client).check_access()
@@ -266,40 +266,40 @@ class TestBaseStreamCheckAccess(unittest.TestCase):
 
     # --- empty parent data list returns True without IndexError ------------
 
-    @mock.patch('tap_intercom.client.IntercomClient.probe_stream')
-    def test_child_stream_returns_true_when_parent_data_empty(self, mock_probe):
+    @mock.patch('tap_intercom.client.IntercomClient.perform')
+    def test_child_stream_returns_true_when_parent_data_empty(self, mock_perform):
         """Parent reachable but empty data list → True, no IndexError raised."""
-        mock_probe.return_value = {Conversations.data_key: []}
+        mock_perform.return_value = {Conversations.data_key: []}
         result = ConversationParts(client=self.client).check_access()
         self.assertTrue(result)
         # Child probe must be skipped entirely.
-        mock_probe.assert_called_once()
+        mock_perform.assert_called_once()
 
     @mock.patch('tap_intercom.streams.LOGGER')
-    @mock.patch('tap_intercom.client.IntercomClient.probe_stream')
-    def test_child_stream_warns_when_parent_data_empty(self, mock_probe, mock_logger):
+    @mock.patch('tap_intercom.client.IntercomClient.perform')
+    def test_child_stream_warns_when_parent_data_empty(self, mock_perform, mock_logger):
         """WARNING must be logged when parent probe returns an empty records list."""
-        mock_probe.return_value = {Conversations.data_key: []}
+        mock_perform.return_value = {Conversations.data_key: []}
         ConversationParts(client=self.client).check_access()
         mock_logger.warning.assert_called()
 
     # --- Companies probes the non-scroll list endpoint ---------------------
 
-    @mock.patch('tap_intercom.client.IntercomClient.probe_stream')
-    def test_companies_check_access_probes_non_scroll_path(self, mock_probe):
+    @mock.patch('tap_intercom.client.IntercomClient.perform')
+    def test_companies_check_access_probes_non_scroll_path(self, mock_perform):
         """Companies.check_access must not hit companies/scroll during discovery."""
-        mock_probe.return_value = {'data': [{'id': 'c1'}]}
+        mock_perform.return_value = {'data': [{'id': 'c1'}]}
         Companies(client=self.client).check_access()
-        call_path = mock_probe.call_args[0][0]
+        call_path = mock_perform.call_args[0][1]
         self.assertEqual(call_path, Companies.probe_path)
         self.assertNotEqual(call_path, Companies.path)
 
-    @mock.patch('tap_intercom.client.IntercomClient.probe_stream')
-    def test_companies_check_access_uses_probe_params(self, mock_probe):
+    @mock.patch('tap_intercom.client.IntercomClient.perform')
+    def test_companies_check_access_uses_probe_params(self, mock_perform):
         """Companies probe must send probe_params, not the scroll params."""
-        mock_probe.return_value = {'data': [{'id': 'c1'}]}
+        mock_perform.return_value = {'data': [{'id': 'c1'}]}
         Companies(client=self.client).check_access()
-        self.assertEqual(mock_probe.call_args[1]['params'], Companies.probe_params)
+        self.assertEqual(mock_perform.call_args[1]['params'], Companies.probe_params)
 
 
 # ---------------------------------------------------------------------------

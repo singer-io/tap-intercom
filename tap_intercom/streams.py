@@ -82,9 +82,9 @@ class BaseStream:
             path, params, probe_http_method, json_body = self.get_probe_data(parent_obj)
 
             try:
-                record = self.client.probe_stream(
+                record = self.client.perform(
+                    probe_http_method,
                     path,
-                    http_method=probe_http_method,
                     params=params,
                     json=json_body,
                 )
@@ -112,9 +112,9 @@ class BaseStream:
 
         try:
             LOGGER.info("Checking access for stream: %s", self.tap_stream_id)
-            self.client.probe_stream(
+            self.client.perform(
+                probe_http_method,
                 path,
-                http_method=probe_http_method,
                 params=params,
                 json=json_body,
             )
@@ -317,16 +317,20 @@ class IncrementalStream(BaseStream):
             # Create child stream object and generate schema
             child_stream_obj = child_stream(self.client, self.catalog, self.selected_streams)
             child_stream_ = self.catalog.get_stream(child_stream.tap_stream_id)
-            child_schema = child_stream_.schema.to_dict()
-            child_metadata = metadata.to_map(child_stream_.metadata)
-            if is_child_selected:
-                # Write schema for child stream as it will be synced by the parent stream
-                singer.write_schema(
-                    child_stream.tap_stream_id,
-                    child_schema,
-                    child_stream.key_properties,
-                    child_stream.replication_key
-                )
+            if child_stream_ is None:
+                # Child stream is not in the catalog (e.g. excluded due to access restrictions)
+                is_child_selected = False
+            else:
+                child_schema = child_stream_.schema.to_dict()
+                child_metadata = metadata.to_map(child_stream_.metadata)
+                if is_child_selected:
+                    # Write schema for child stream as it will be synced by the parent stream
+                    singer.write_schema(
+                        child_stream.tap_stream_id,
+                        child_schema,
+                        child_stream.key_properties,
+                        child_stream.replication_key
+                    )
 
         LOGGER.info("Stream: {}, initial max_bookmark_value: {}".format(self.tap_stream_id, sync_start_date))
         max_datetime = sync_start_date

@@ -90,15 +90,15 @@ class TestProbeStreamAndMethods(unittest.TestCase):
 
     @mock.patch("tap_intercom.client.IntercomClient.get")
     @mock.patch("tap_intercom.client.IntercomClient.post")
-    def test_probe_stream_calls_get_by_default(self, mock_post, mock_get):
-        self.intercom_client.probe_stream('path')
+    def test_perform_calls_get_by_default(self, mock_post, mock_get):
+        self.intercom_client.perform('GET', 'path')
         mock_get.assert_called_once()
         mock_post.assert_not_called()
 
     @mock.patch("tap_intercom.client.IntercomClient.get")
     @mock.patch("tap_intercom.client.IntercomClient.post")
-    def test_probe_stream_calls_post_for_post_method(self, mock_post, mock_get):
-        self.intercom_client.probe_stream('path', http_method='POST')
+    def test_perform_calls_post_for_post_method(self, mock_post, mock_get):
+        self.intercom_client.perform('POST', 'path')
         mock_post.assert_called_once()
         mock_get.assert_not_called()
 
