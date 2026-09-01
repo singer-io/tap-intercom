@@ -31,7 +31,7 @@ def _get_replication_key_from_meta(schema_meta: list) -> str:
     return None
 
 
-def _prune_inaccessible_children(schemas: dict, field_metadata: dict) -> None:
+def _prune_inaccessible_children(schemas: dict, field_metadata: dict) -> list:
     """
     Remove child streams from the catalog whose parent stream was excluded.
 
@@ -40,8 +40,10 @@ def _prune_inaccessible_children(schemas: dict, field_metadata: dict) -> None:
     due to an access failure.  Children of non-replicable helper streams
     (e.g. AdminList) are intentionally skipped.
 
-    Mutates schemas and field_metadata in place.
+    Mutates schemas and field_metadata in place and returns the list of
+    pruned child stream names so callers can include them.
     """
+    pruned = []
     for name, stream_cls in list(STREAMS.items()):
         parent = stream_cls.parent
         if (name in schemas
@@ -55,6 +57,8 @@ def _prune_inaccessible_children(schemas: dict, field_metadata: dict) -> None:
             )
             schemas.pop(name)
             field_metadata.pop(name)
+            pruned.append(name)
+    return pruned
 
 
 def _apply_access_checks(
@@ -64,21 +68,47 @@ def _apply_access_checks(
     Probe each stream for read access and remove inaccessible streams
     (and their children) from schemas and field_metadata in place.
 
+    Independent (non-child) streams are probed first.  Child streams whose
+    parent has already been found inaccessible are excluded without
+    making any additional API calls.
+
     Raises IntercomForbiddenError if no streams remain in the catalog after
     access checks, since discovery would produce a useless empty catalog.
     """
-    inaccessible_streams = [
-        stream_name
-        for stream_name, stream_cls in STREAMS.items()
-        if stream_name in schemas
-        and not stream_cls(client=client).check_access()
-    ]
+    inaccessible_streams = []
+
+    # Probe independent streams.
+    for stream_name, stream_cls in STREAMS.items():
+        if stream_name not in schemas:
+            continue
+        parent = stream_cls.parent
+        has_replicable_parent = parent is not None and getattr(parent, 'to_replicate', True)
+        if has_replicable_parent:
+            continue
+        if not stream_cls(client=client).check_access():
+            inaccessible_streams.append(stream_name)
+
+    # Probe child streams, skipping those whose parent is already denied.
+    for stream_name, stream_cls in STREAMS.items():
+        if stream_name not in schemas:
+            continue
+        parent = stream_cls.parent
+        has_replicable_parent = parent is not None and getattr(parent, 'to_replicate', True)
+        if not has_replicable_parent:
+            continue
+        if parent.tap_stream_id in inaccessible_streams:
+            # Parent already denied — skip probing to avoid a duplicate API call.
+            inaccessible_streams.append(stream_name)
+            continue
+        if not stream_cls(client=client).check_access():
+            inaccessible_streams.append(stream_name)
 
     for stream_name in inaccessible_streams:
         schemas.pop(stream_name, None)
         field_metadata.pop(stream_name, None)
 
-    _prune_inaccessible_children(schemas, field_metadata)
+    pruned_children = _prune_inaccessible_children(schemas, field_metadata)
+    inaccessible_streams.extend(pruned_children)
 
     if not schemas:
         raise IntercomForbiddenError(

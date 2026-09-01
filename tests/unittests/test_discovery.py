@@ -362,20 +362,22 @@ class TestPruneInaccessibleChildren(unittest.TestCase):
         schemas = {'conversation_parts': {}, 'tags': {}}
         field_metadata = {'conversation_parts': [], 'tags': []}
 
-        _prune_inaccessible_children(schemas, field_metadata)
+        pruned = _prune_inaccessible_children(schemas, field_metadata)
 
         self.assertNotIn('conversation_parts', schemas)
         self.assertNotIn('conversation_parts', field_metadata)
+        self.assertIn('conversation_parts', pruned)
 
     def test_child_not_pruned_when_parent_present(self):
         """Child stream is retained when its parent is still in schemas."""
         schemas = {'conversations': {}, 'conversation_parts': {}}
         field_metadata = {'conversations': [], 'conversation_parts': []}
 
-        _prune_inaccessible_children(schemas, field_metadata)
+        pruned = _prune_inaccessible_children(schemas, field_metadata)
 
         self.assertIn('conversation_parts', schemas)
         self.assertIn('conversation_parts', field_metadata)
+        self.assertEqual(pruned, [])
 
     def test_unrelated_streams_unaffected(self):
         """Streams without a replicable parent in schemas are untouched."""
@@ -407,13 +409,14 @@ class TestPruneInaccessibleChildren(unittest.TestCase):
         field_metadata = {'tags': []}
 
         try:
-            _prune_inaccessible_children(schemas, field_metadata)
+            pruned = _prune_inaccessible_children(schemas, field_metadata)
         except Exception as exc:  # pragma: no cover
             self.fail(
                 '_prune_inaccessible_children raised unexpectedly: {}'.format(
                     exc
                 )
             )
+        self.assertEqual(pruned, [])
 
     @mock.patch('tap_intercom.discover.LOGGER')
     def test_warning_logged_for_pruned_child(self, mock_logger):
@@ -441,10 +444,11 @@ class TestPruneInaccessibleChildren(unittest.TestCase):
         schemas.pop(inaccessible_parent)
         field_metadata.pop(inaccessible_parent)
 
-        _prune_inaccessible_children(schemas, field_metadata)
+        pruned = _prune_inaccessible_children(schemas, field_metadata)
 
         self.assertNotIn(expected_pruned_child, schemas)
         self.assertNotIn(expected_pruned_child, field_metadata)
+        self.assertIn(expected_pruned_child, pruned)
 
 
 # ---------------------------------------------------------------------------
@@ -520,18 +524,20 @@ class TestApplyAccessChecks(unittest.TestCase):
     def test_child_excluded_when_parent_denied(self):
         """
         When conversations is denied, conversation_parts must also be removed
-        via _prune_inaccessible_children.
+        without calling check_access on the child.
         """
         parent_cls = mock.MagicMock()
         parent_cls.tap_stream_id = 'conversations'
+        parent_cls.to_replicate = True
 
+        child_mock_cls = _make_mock_stream_cls(
+            'conversation_parts', parent=parent_cls, accessible=True
+        )
         mock_streams = {
             'conversations': _make_mock_stream_cls(
                 'conversations', accessible=False
             ),
-            'conversation_parts': _make_mock_stream_cls(
-                'conversation_parts', parent=parent_cls, accessible=True
-            ),
+            'conversation_parts': child_mock_cls,
             'tags': _make_mock_stream_cls('tags', accessible=True),
         }
         schemas, field_metadata = _make_schemas(
@@ -544,6 +550,8 @@ class TestApplyAccessChecks(unittest.TestCase):
         self.assertNotIn('conversations', schemas)
         self.assertNotIn('conversation_parts', schemas)
         self.assertIn('tags', schemas)
+        # child check_access must NOT have been called
+        child_mock_cls.return_value.check_access.assert_not_called()
 
     # --- warning logged for inaccessible streams ---------------------------
 
@@ -561,6 +569,35 @@ class TestApplyAccessChecks(unittest.TestCase):
 
         mock_logger.warning.assert_called()
         self.assertIn('tags', str(mock_logger.warning.call_args))
+
+    @mock.patch('tap_intercom.discover.LOGGER')
+    def test_warning_includes_pruned_children(self, mock_logger):
+        """Children excluded via _prune_inaccessible_children must appear in the summary warning."""
+        parent_cls = mock.MagicMock()
+        parent_cls.tap_stream_id = 'conversations'
+        parent_cls.to_replicate = True
+
+        # conversation_parts has a replicable parent; mark it accessible so
+        # pass-2 short-circuit does NOT trigger — we want _prune to catch it.
+        # Achieve this by keeping conversations out of STREAMS (not probed)
+        # but present in schemas, so _prune removes it.
+        mock_streams = {
+            'tags': _make_mock_stream_cls('tags', accessible=True),
+            'conversation_parts': _make_mock_stream_cls(
+                'conversation_parts', parent=parent_cls, accessible=True
+            ),
+        }
+        # conversations is in schemas but NOT in mock_streams — it won't be
+        # probed and won't be removed by pass 1/2, so _prune_inaccessible_children
+        # will catch conversation_parts (parent absent from schemas).
+        schemas = {'tags': {}, 'conversation_parts': {}}
+        field_metadata = {'tags': [], 'conversation_parts': []}
+
+        with mock.patch('tap_intercom.discover.STREAMS', mock_streams):
+            _apply_access_checks(self.client, schemas, field_metadata)
+
+        all_warnings = ' '.join(str(c) for c in mock_logger.warning.call_args_list)
+        self.assertIn('conversation_parts', all_warnings)
 
 
 # ---------------------------------------------------------------------------
