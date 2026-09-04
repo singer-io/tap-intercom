@@ -8,6 +8,8 @@ from singer.catalog import Catalog
 from tap_intercom.client import (
     IntercomClient,
     IntercomForbiddenError,
+    IntercomNotFoundError,
+    IntercomPaymentRequiredError,
     IntercomUnauthorizedError,
     IntercomScrollExistsError,
 )
@@ -264,24 +266,67 @@ class TestBaseStreamCheckAccess(unittest.TestCase):
         mock_logger.error.assert_not_called()
         mock_logger.info.assert_called()
 
-    # --- empty parent data list returns True without IndexError ------------
+    # --- empty parent data list still probes child with placeholder id -----
 
     @mock.patch('tap_intercom.client.IntercomClient.perform')
-    def test_child_stream_returns_true_when_parent_data_empty(self, mock_perform):
-        """Parent reachable but empty data list → True, no IndexError raised."""
-        mock_perform.return_value = {Conversations.data_key: []}
+    def test_child_stream_probes_placeholder_when_parent_data_empty(self, mock_perform):
+        """
+        Parent reachable but empty data list → child endpoint is still
+        probed using a placeholder id (no IndexError, no assumed access).
+        """
+        mock_perform.side_effect = [
+            {Conversations.data_key: []},  # parent probe: no records
+            {},                             # child probe with placeholder id succeeds
+        ]
         result = ConversationParts(client=self.client).check_access()
         self.assertTrue(result)
-        # Child probe must be skipped entirely.
-        mock_perform.assert_called_once()
+        self.assertEqual(mock_perform.call_count, 2)
+        second_args = mock_perform.call_args_list[1]
+        self.assertIn('0', second_args[0][1])
 
     @mock.patch('tap_intercom.streams.LOGGER')
     @mock.patch('tap_intercom.client.IntercomClient.perform')
     def test_child_stream_warns_when_parent_data_empty(self, mock_perform, mock_logger):
         """WARNING must be logged when parent probe returns an empty records list."""
-        mock_perform.return_value = {Conversations.data_key: []}
+        mock_perform.side_effect = [
+            {Conversations.data_key: []},
+            {},
+        ]
         ConversationParts(client=self.client).check_access()
         mock_logger.warning.assert_called()
+
+    @mock.patch('tap_intercom.client.IntercomClient.perform')
+    def test_child_stream_returns_false_when_placeholder_probe_forbidden(self, mock_perform):
+        """Empty parent data, then 403 on the placeholder child probe → False."""
+        mock_perform.side_effect = [
+            {Conversations.data_key: []},
+            IntercomForbiddenError('HTTP-error-code: 403'),
+        ]
+        result = ConversationParts(client=self.client).check_access()
+        self.assertFalse(result)
+
+    @mock.patch('tap_intercom.client.IntercomClient.perform')
+    def test_placeholder_probe_not_found_is_accessible(self, mock_perform):
+        """A 404 on the placeholder id proves the endpoint is reachable → True."""
+        mock_perform.side_effect = [
+            {Conversations.data_key: []},
+            IntercomNotFoundError('HTTP-error-code: 404'),
+        ]
+        result = ConversationParts(client=self.client).check_access()
+        self.assertTrue(result)
+
+    # --- generic (non-401/403/404/scroll) API error during own probe -------
+
+    @mock.patch('tap_intercom.client.IntercomClient.perform')
+    def test_check_access_generic_error_returns_false(self, mock_perform):
+        """
+        Any other IntercomError (e.g. 402 payment required) raised while
+        probing the stream's own endpoint must be caught and return False,
+        never propagate and hard-fail discovery.
+        """
+        mock_perform.side_effect = IntercomPaymentRequiredError('HTTP-error-code: 402')
+        result = Tags(client=self.client).check_access()
+        self.assertFalse(result)
 
     # --- Companies probes the non-scroll list endpoint ---------------------
 
@@ -505,10 +550,14 @@ class TestApplyAccessChecks(unittest.TestCase):
         for name in expected_present:
             self.assertIn(name, schemas)
 
-    # --- all denied → IntercomForbiddenError --------------------------------
+    # --- all denied → empty catalog, no hard-fail ---------------------------
 
-    def test_all_unauthorized_raises_forbidden_error(self):
-        """All streams inaccessible -> IntercomForbiddenError raised."""
+    def test_all_unauthorized_does_not_raise(self):
+        """
+        All streams inaccessible -> discovery must NOT raise. schemas ends up
+        empty and a warning is logged, but _apply_access_checks must return
+        normally so discover() can produce an (empty) catalog.
+        """
         mock_streams = {
             'tags': _make_mock_stream_cls('tags', accessible=False),
             'teams': _make_mock_stream_cls('teams', accessible=False),
@@ -516,8 +565,29 @@ class TestApplyAccessChecks(unittest.TestCase):
         schemas, field_metadata = _make_schemas(['tags', 'teams'])
 
         with mock.patch('tap_intercom.discover.STREAMS', mock_streams):
-            with self.assertRaises(IntercomForbiddenError):
+            try:
                 _apply_access_checks(self.client, schemas, field_metadata)
+            except Exception as exc:  # pragma: no cover
+                self.fail(
+                    '_apply_access_checks raised unexpectedly when all '
+                    'streams were denied: {}'.format(exc)
+                )
+
+        self.assertEqual(schemas, {})
+        self.assertEqual(field_metadata, {})
+
+    @mock.patch('tap_intercom.discover.LOGGER')
+    def test_all_unauthorized_logs_warning_for_empty_catalog(self, mock_logger):
+        """When schemas ends up empty, a WARNING must explain why."""
+        mock_streams = {
+            'tags': _make_mock_stream_cls('tags', accessible=False),
+        }
+        schemas, field_metadata = _make_schemas(['tags'])
+
+        with mock.patch('tap_intercom.discover.STREAMS', mock_streams):
+            _apply_access_checks(self.client, schemas, field_metadata)
+
+        mock_logger.warning.assert_called()
 
     # --- child pruned when its parent is denied (cascade) ------------------
 
@@ -552,6 +622,41 @@ class TestApplyAccessChecks(unittest.TestCase):
         self.assertIn('tags', schemas)
         # child check_access must NOT have been called
         child_mock_cls.return_value.check_access.assert_not_called()
+
+    # --- child itself denied while its parent IS accessible -----------------
+
+    def test_child_excluded_when_child_itself_denied(self):
+        """
+        When the parent is accessible but the child's own check_access()
+        returns False, the child must still be excluded (not short-circuited
+        via the parent-denied path).
+        """
+        parent_cls = mock.MagicMock()
+        parent_cls.tap_stream_id = 'conversations'
+        parent_cls.to_replicate = True
+
+        child_mock_cls = _make_mock_stream_cls(
+            'conversation_parts', parent=parent_cls, accessible=False
+        )
+        mock_streams = {
+            'conversations': _make_mock_stream_cls(
+                'conversations', accessible=True
+            ),
+            'conversation_parts': child_mock_cls,
+            'tags': _make_mock_stream_cls('tags', accessible=True),
+        }
+        schemas, field_metadata = _make_schemas(
+            ['conversations', 'conversation_parts', 'tags']
+        )
+
+        with mock.patch('tap_intercom.discover.STREAMS', mock_streams):
+            _apply_access_checks(self.client, schemas, field_metadata)
+
+        self.assertIn('conversations', schemas)
+        self.assertNotIn('conversation_parts', schemas)
+        self.assertIn('tags', schemas)
+        # child's own check_access WAS called since the parent is accessible
+        child_mock_cls.return_value.check_access.assert_called_once()
 
     # --- warning logged for inaccessible streams ---------------------------
 
@@ -639,6 +744,24 @@ class TestDiscover(unittest.TestCase):
             name for name, cls in STREAMS.items() if cls.to_replicate
         }
         self.assertEqual(catalog_ids, expected)
+
+    def test_discover_returns_empty_catalog_when_all_streams_denied(self):
+        """
+        discover() must not raise when _apply_access_checks empties every
+        stream out of schemas/field_metadata — it should return a Catalog
+        with zero streams instead of propagating an error.
+        """
+        def _empty_out(_client, schemas, field_metadata):
+            schemas.clear()
+            field_metadata.clear()
+
+        with mock.patch(
+            'tap_intercom.discover._apply_access_checks', side_effect=_empty_out
+        ):
+            catalog = discover(self.client)
+
+        self.assertIsInstance(catalog, Catalog)
+        self.assertEqual(len(catalog.streams), 0)
 
     def test_discover_invokes_apply_access_checks(self):
         """discover() must delegate access gating to _apply_access_checks."""

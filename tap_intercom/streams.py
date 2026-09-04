@@ -68,11 +68,15 @@ class BaseStream:
         """
         Verify that the API credentials have read access to this stream.
 
-        Returns True if the stream is accessible.
-        Returns False only on HTTP 401 (Unauthorized) or 403 (Forbidden).
-        A scroll_exists (400) response is treated as accessible because it
-        proves a prior successful scroll session was open for this workspace.
-        All other errors propagate so that backoff/retry can handle them.
+        Returns True if the stream is accessible (including a 404, which
+        proves the endpoint itself is reachable/authorised, and a
+        scroll_exists response, which proves a prior scroll session was
+        open for this workspace).
+
+        Returns False on HTTP 401 (Unauthorized), 403 (Forbidden), or any
+        other unexpected API error — this method never raises, so a single
+        stream's probe failure can never hard-fail the whole discovery
+        process.
         """
         parent_record_id = None
 
@@ -90,17 +94,18 @@ class BaseStream:
                 )
                 if hasattr(parent_obj, 'data_key') and parent_obj.data_key is not None:
                     data_list = record.get(parent_obj.data_key)
-                    if not data_list:
-                        # Parent is reachable but empty; child access cannot be verified.
+                    if data_list:
+                        record = data_list[0]
+                        parent_record_id = record.get('id')
+                    else:
                         LOGGER.warning(
-                            "Parent stream %s returned no records; assuming child stream %s is accessible.",
+                            "Parent stream %s returned no records, probing child "
+                            "stream %s with a placeholder id.",
                             parent_obj.tap_stream_id, self.tap_stream_id
                         )
-                        return True
-
-                    record = data_list[0]
-
-                parent_record_id = record.get('id')
+                        parent_record_id = '0'
+                else:
+                    parent_record_id = record.get('id')
             except (IntercomForbiddenError, IntercomUnauthorizedError) as exc:
                 LOGGER.warning(
                     "Parent Stream %s is not accessible. Error: %s",
@@ -129,10 +134,23 @@ class BaseStream:
                 self.tap_stream_id
             )
             return True
+        except IntercomNotFoundError:
+            LOGGER.info(
+                "Stream %s is accessible (probed resource was not found).",
+                self.tap_stream_id
+            )
+            return True
         except (IntercomForbiddenError, IntercomUnauthorizedError) as exc:
             LOGGER.warning(
                 "Stream %s is not accessible. Error: %s",
                 self.tap_stream_id, str(exc)
+            )
+            return False
+        except IntercomError as exc:
+            LOGGER.warning(
+                "Stream %s is not accessible. Error: %s",
+                self.tap_stream_id,
+                str(exc)
             )
             return False
 

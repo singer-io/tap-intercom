@@ -86,6 +86,34 @@ class TestGetSchemas(unittest.TestCase):
                 "get_schemas() raised TypeError (unexpected arg): {}".format(exc)
             )
 
+    def test_child_stream_has_parent_tap_stream_id(self):
+        """
+        conversation_parts' root metadata must carry parent-tap-stream-id
+        pointing at conversations.
+
+        This directly exercises the parent/child metadata relationship at
+        the unit level (independent of live API access/credentials), since
+        the tap-tester integration discovery test excludes conversation_parts
+        from its assertions when the test account lacks access to it.
+        """
+        _, field_metadata = get_schemas()
+        mdata = field_metadata['conversation_parts']
+        root_meta = next(
+            (m.get('metadata', {}) for m in mdata if m.get('breadcrumb') == ()),
+            {}
+        )
+        self.assertEqual(root_meta.get('parent-tap-stream-id'), 'conversations')
+
+    def test_independent_stream_has_no_parent_tap_stream_id(self):
+        """A stream without a parent must not have parent-tap-stream-id set."""
+        _, field_metadata = get_schemas()
+        mdata = field_metadata['conversations']
+        root_meta = next(
+            (m.get('metadata', {}) for m in mdata if m.get('breadcrumb') == ()),
+            {}
+        )
+        self.assertNotIn('parent-tap-stream-id', root_meta)
+
 
 if __name__ == '__main__':  # pragma: no cover
     unittest.main()

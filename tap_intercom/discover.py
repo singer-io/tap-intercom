@@ -1,7 +1,7 @@
 import singer
 from singer.catalog import Catalog
 
-from tap_intercom.client import IntercomClient, IntercomForbiddenError
+from tap_intercom.client import IntercomClient
 from tap_intercom.schema import get_schemas
 from tap_intercom.streams import STREAMS
 
@@ -72,8 +72,10 @@ def _apply_access_checks(
     parent has already been found inaccessible are excluded without
     making any additional API calls.
 
-    Raises IntercomForbiddenError if no streams remain in the catalog after
-    access checks, since discovery would produce a useless empty catalog.
+    Never raises on account of access failures — even if every stream is
+    found inaccessible, schemas/field_metadata are simply left empty and a
+    warning is logged. Discovery must not hard-fail on 403/401 responses,
+    no matter how many streams are affected.
     """
     inaccessible_streams = []
 
@@ -111,11 +113,8 @@ def _apply_access_checks(
     inaccessible_streams.extend(pruned_children)
 
     if not schemas:
-        raise IntercomForbiddenError(
-            "HTTP-error-code: 403, Error: The account credentials supplied "
-            "do not have 'read' access to any of the streams supported by "
-            "the tap. Data collection cannot be initiated due to lack of "
-            "permissions."
+        LOGGER.warning(
+            "No accessible streams found with the provided credentials."
         )
 
     if inaccessible_streams:
