@@ -12,7 +12,9 @@ import singer
 from singer import Transformer, metrics, metadata, UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING
 from singer.transform import transform, unix_milliseconds_to_datetime
 
-from tap_intercom.client import (IntercomClient, IntercomError, IntercomNotFoundError)
+from tap_intercom.client import (IntercomClient, IntercomError, IntercomNotFoundError,
+                                 IntercomForbiddenError, IntercomUnauthorizedError,
+                                 IntercomScrollExistsError)
 from tap_intercom.transform import (transform_json, transform_times, find_datetimes_in_schema)
 
 LOGGER = singer.get_logger()
@@ -38,10 +40,111 @@ class BaseStream:
     data_key = None
     child = None
 
-    def __init__(self, client: IntercomClient, catalog, selected_streams):
+    def __init__(self, client: IntercomClient = None,
+                 catalog=None, selected_streams=None):
         self.client = client
         self.catalog = catalog
         self.selected_streams = selected_streams
+
+    def get_probe_data(self, obj, parent_record_id=None):
+        """
+            Prepares and returns data/params required to probe a stream
+        """
+        if parent_record_id is not None:
+            path = obj.path.format(parent_record_id)
+        else:
+            path = getattr(obj, 'probe_path', obj.path)
+
+        params = getattr(obj, 'probe_params', getattr(obj, 'params', {}))
+        json_body = {}
+
+        probe_http_method = getattr(obj, 'probe_http_method', 'GET').upper()
+        if probe_http_method == 'POST':
+            json_body = getattr(obj, 'probe_search_query', {})
+
+        return path, params, probe_http_method, json_body
+
+    def check_access(self) -> bool:
+        """
+        Verify that the API credentials have read access to this stream.
+
+        Returns True if the stream is accessible (including a 404, which
+        proves the endpoint itself is reachable/authorised, and a
+        scroll_exists response, which proves a prior scroll session was
+        open for this workspace).
+
+        Returns False only on HTTP 401 (Unauthorized) or 403 (Forbidden).
+        Other Intercom errors are propagated so the client's existing retry
+        and error-handling logic can handle them.
+        """
+        parent_record_id = None
+
+        if self.parent is not None:
+            # Get a record from parent
+            parent_obj = self.parent
+            path, params, probe_http_method, json_body = self.get_probe_data(parent_obj)
+
+            try:
+                record = self.client.perform(
+                    probe_http_method,
+                    path,
+                    params=params,
+                    json=json_body,
+                )
+                if hasattr(parent_obj, 'data_key') and parent_obj.data_key is not None:
+                    data_list = record.get(parent_obj.data_key)
+                    if data_list:
+                        record = data_list[0]
+                        parent_record_id = record.get('id')
+                    else:
+                        LOGGER.warning(
+                            "Parent stream %s returned no records, probing child "
+                            "stream %s with a placeholder id.",
+                            parent_obj.tap_stream_id, self.tap_stream_id
+                        )
+                        parent_record_id = '0'
+                else:
+                    parent_record_id = record.get('id')
+            except (IntercomForbiddenError, IntercomUnauthorizedError) as exc:
+                LOGGER.warning(
+                    "Parent Stream %s is not accessible. Error: %s",
+                    parent_obj.tap_stream_id, str(exc)
+                )
+                return False
+
+        path, params, probe_http_method, json_body = self.get_probe_data(self, parent_record_id=parent_record_id)
+
+        try:
+            LOGGER.info("Checking access for stream: %s", self.tap_stream_id)
+            self.client.perform(
+                probe_http_method,
+                path,
+                params=params,
+                json=json_body,
+            )
+            LOGGER.info("Stream %s is accessible", self.tap_stream_id)
+            return True
+        except IntercomScrollExistsError:
+            # scroll_exists means a prior scroll session is still open.
+            # The endpoint is reachable — treat as accessible.
+            LOGGER.info(
+                "Stream %s is accessible "
+                "(scroll already exists for workspace).",
+                self.tap_stream_id
+            )
+            return True
+        except IntercomNotFoundError:
+            LOGGER.info(
+                "Stream %s is accessible (probed resource was not found).",
+                self.tap_stream_id
+            )
+            return True
+        except (IntercomForbiddenError, IntercomUnauthorizedError) as exc:
+            LOGGER.warning(
+                "Stream %s is not accessible. Error: %s",
+                self.tap_stream_id, str(exc)
+            )
+            return False
 
     def get_records(self, bookmark_datetime: datetime = None, is_parent: bool = False, stream_metadata=None) -> list:
         """
@@ -167,6 +270,49 @@ class IncrementalStream(BaseStream):
                                           singer.utils.strftime(bookmark_value))
             singer.write_state(state)
 
+    def _setup_child_stream(self, state, config, parent_bookmark_utc):
+        """
+        Initialises child stream context for a parent stream that has a child.
+
+        Returns a tuple of:
+            (sync_start_date, is_parent_selected, is_child_selected,
+             child_bookmark_ts, child_stream_obj, child_schema, child_metadata)
+        """
+        child_stream = STREAMS.get(self.child)
+        child_bookmark = singer.get_bookmark(state, child_stream.tap_stream_id, self.replication_key, config['start_date'])
+        child_bookmark_utc = singer.utils.strptime_to_utc(child_bookmark)
+        child_bookmark_ts = child_bookmark_utc.timestamp() * 1000
+
+        is_parent_selected = self.tap_stream_id in self.selected_streams
+        is_child_selected = child_stream.tap_stream_id in self.selected_streams
+
+        if is_parent_selected and is_child_selected:
+            sync_start_date = min(parent_bookmark_utc, child_bookmark_utc)
+        elif is_child_selected:
+            sync_start_date = child_bookmark_utc
+        else:
+            sync_start_date = parent_bookmark_utc
+
+        child_stream_obj = child_stream(self.client, self.catalog, self.selected_streams)
+        child_schema = {}
+        child_metadata = None
+        child_stream_ = self.catalog.get_stream(child_stream.tap_stream_id)
+        if child_stream_ is None:
+            # Child stream is not in the catalog (e.g. excluded due to access restrictions)
+            is_child_selected = False
+        else:
+            child_schema = child_stream_.schema.to_dict()
+            child_metadata = metadata.to_map(child_stream_.metadata)
+            if is_child_selected:
+                singer.write_schema(
+                    child_stream.tap_stream_id,
+                    child_schema,
+                    child_stream.key_properties,
+                    child_stream.replication_key
+                )
+
+        return sync_start_date, is_parent_selected, is_child_selected, child_bookmark_ts, child_stream_obj, child_schema, child_metadata
+
     # Disabled `unused-argument` as it causing pylint error.
     # Method which call this `sync` method is passing unused argument.So, removing argument would not work.
     # pylint: disable=too-many-arguments,unused-argument
@@ -188,8 +334,6 @@ class IncrementalStream(BaseStream):
 
         # Check if the current stream has child stream or not
         has_child = self.child is not None
-        # Child stream class
-        child_stream = STREAMS.get(self.child)
 
         # Get current stream bookmark
         parent_bookmark = singer.get_bookmark(state, self.tap_stream_id, self.replication_key, config['start_date'])
@@ -205,35 +349,18 @@ class IncrementalStream(BaseStream):
         # And update the sync start date to minimum of parent bookmark or child bookmark
         child_bookmark_ts = None
         child_stream_obj = None
+        child_schema = {}
         child_metadata = None
         if has_child:
-            child_bookmark = singer.get_bookmark(state, child_stream.tap_stream_id, self.replication_key, config['start_date'])
-            child_bookmark_utc = singer.utils.strptime_to_utc(child_bookmark)
-            child_bookmark_ts = child_bookmark_utc.timestamp() * 1000
-
-            is_parent_selected = self.tap_stream_id in self.selected_streams
-            is_child_selected = child_stream.tap_stream_id in self.selected_streams
-
-            if is_parent_selected and is_child_selected:
-                sync_start_date = min(parent_bookmark_utc, child_bookmark_utc)
-            elif is_parent_selected:
-                sync_start_date = parent_bookmark_utc
-            elif is_child_selected:
-                sync_start_date = singer.utils.strptime_to_utc(child_bookmark)
-
-            # Create child stream object and generate schema
-            child_stream_obj = child_stream(self.client, self.catalog, self.selected_streams)
-            child_stream_ = self.catalog.get_stream(child_stream.tap_stream_id)
-            child_schema = child_stream_.schema.to_dict()
-            child_metadata = metadata.to_map(child_stream_.metadata)
-            if is_child_selected:
-                # Write schema for child stream as it will be synced by the parent stream
-                singer.write_schema(
-                    child_stream.tap_stream_id,
-                    child_schema,
-                    child_stream.key_properties,
-                    child_stream.replication_key
-                )
+            (
+                sync_start_date,
+                is_parent_selected,
+                is_child_selected,
+                child_bookmark_ts,
+                child_stream_obj,
+                child_schema,
+                child_metadata,
+            ) = self._setup_child_stream(state, config, parent_bookmark_utc)
 
         LOGGER.info("Stream: {}, initial max_bookmark_value: {}".format(self.tap_stream_id, sync_start_date))
         max_datetime = sync_start_date
@@ -432,6 +559,9 @@ class Companies(IncrementalStream):
     replication_key = 'updated_at'
     valid_replication_keys = ['updated_at']
     data_key = 'data'
+    # Probe the plain list endpoint so discovery doesn't open a scroll session.
+    probe_path = 'companies'
+    probe_params = {'page': 1, 'per_page': 1}
 
     def get_records(self, bookmark_datetime=None, is_parent=False, stream_metadata=None) -> Iterator[list]:
         scrolling = True
@@ -547,6 +677,18 @@ class Conversations(IncrementalStream):
     data_key = 'conversations'
     per_page = MAX_PAGE_SIZE
     child = 'conversation_parts'
+
+    probe_http_method = "POST"
+    probe_search_query = {
+        "pagination": {
+            "per_page": 1
+        },
+        "query": {
+            "field": "id",
+            "operator": "!=",
+            "value": None
+        }
+    }
 
     def set_last_processed(self, state):
         self.last_processed = singer.get_bookmark(
@@ -724,6 +866,18 @@ class Contacts(IncrementalStream):
     # addressable_list_fields = ['tags', 'notes', 'companies']
     addressable_list_fields = ['tags', 'companies']
     to_write_intermediate_bookmark = True
+
+    probe_http_method = "POST"
+    probe_search_query = {
+        "pagination": {
+            "per_page": 1
+        },
+        "query": {
+            "field": "id",
+            "operator": "!=",
+            "value": None
+        }
+    }
 
     def get_addressable_list(self, contact_list: dict, stream_metadata: dict) -> dict:
         params = {

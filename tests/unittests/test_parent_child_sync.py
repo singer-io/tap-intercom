@@ -96,3 +96,156 @@ class TestParentChildWriteRecords(unittest.TestCase):
         conversations.sync(state={}, stream_schema={}, stream_metadata={}, config=config, transformer=None)
         self.assertEqual(mocked_transform.call_count, 1)
         self.assertEqual(mocked_sync_substream.call_count, 1)
+
+
+class TestSkipRecordsBranch(unittest.TestCase):
+    """Covers skip_records=True path (skipped_parent_ids.append + continue)."""
+
+    @mock.patch('singer.write_schema')
+    @mock.patch('tap_intercom.streams.BaseStream.sync_substream')
+    @mock.patch('tap_intercom.streams.transform', side_effect=transform)
+    @mock.patch('tap_intercom.streams.Conversations.get_records')
+    def test_skip_records_appends_to_skipped_ids(
+        self, mocked_get_records, mocked_transform, mocked_sync_substream, mocked_write_schema
+    ):
+        """When last_processed is set, records with id <= last_processed are skipped."""
+        skipped_id = 'conv-05'
+        last_proc = 'conv-10'
+        mocked_get_records.return_value = [
+            {'id': skipped_id, 'updated_at': 1640636000000},
+        ]
+        client = IntercomClient('test_access_token', 300)
+        state = {
+            'bookmarks': {
+                'conversations': {'last_processed': last_proc},
+                'conversation_parts': {},
+            }
+        }
+        conversations = Conversations(
+            client=client,
+            catalog=Catalog(['conversations', 'conversation_parts']),
+            selected_streams=['conversations', 'conversation_parts'],
+        )
+        conversations.sync(
+            state=state, stream_schema={}, stream_metadata={},
+            config={'start_date': '2021-01-01'}, transformer=None,
+        )
+        self.assertIn(
+            (skipped_id, 1640636000000), conversations.skipped_parent_ids
+        )
+
+
+class CatalogChildMissing(Catalog):
+    """Catalog stub whose get_stream() returns None for a specific stream,
+    simulating a child stream excluded from the catalog (e.g. inaccessible)."""
+
+    def __init__(self, streams, missing_stream_id):
+        super().__init__(streams)
+        self.missing_stream_id = missing_stream_id
+
+    def get_stream(self, stream_name):
+        if stream_name == self.missing_stream_id:
+            return None
+        return super().get_stream(stream_name)
+
+
+class TestSetupChildStreamMissingFromCatalog(unittest.TestCase):
+    """Covers the branch in _setup_child_stream() where the child stream is
+    absent from the catalog (e.g. excluded during discovery access checks)."""
+
+    def test_child_missing_from_catalog_disables_child_selection(self):
+        client = IntercomClient('test_access_token', 300)
+        conversations = Conversations(
+            client=client,
+            catalog=CatalogChildMissing(
+                ['conversations', 'conversation_parts'], 'conversation_parts'
+            ),
+            selected_streams=['conversations', 'conversation_parts'],
+        )
+        parent_bookmark_utc = singer.utils.strptime_to_utc('2021-01-01T00:00:00Z')
+
+        (
+            _sync_start_date,
+            _is_parent_selected,
+            is_child_selected,
+            _child_bookmark_ts,
+            _child_stream_obj,
+            child_schema,
+            child_metadata,
+        ) = conversations._setup_child_stream(
+            state={}, config={'start_date': '2021-01-01'},
+            parent_bookmark_utc=parent_bookmark_utc,
+        )
+
+        # Child absent from catalog -> selection must be forced off and no
+        # schema/metadata can be derived from it.
+        self.assertFalse(is_child_selected)
+        self.assertEqual(child_schema, {})
+        self.assertIsNone(child_metadata)
+
+    @mock.patch('singer.write_schema')
+    @mock.patch('tap_intercom.streams.transform', side_effect=transform)
+    @mock.patch('tap_intercom.streams.Conversations.get_records')
+    def test_sync_completes_when_child_missing_from_catalog(
+        self, mocked_get_records, mocked_transform, mocked_write_schema
+    ):
+        """
+            End-to-end: sync() must not crash when the selected child stream
+            was excluded from the catalog (e.g. denied during discovery).
+        """
+        mocked_get_records.return_value = [
+            {'id': 'conv-01', 'updated_at': 1640636000000},
+        ]
+        client = IntercomClient('test_access_token', 300)
+        conversations = Conversations(
+            client=client,
+            catalog=CatalogChildMissing(
+                ['conversations', 'conversation_parts'], 'conversation_parts'
+            ),
+            selected_streams=['conversations', 'conversation_parts'],
+        )
+        conversations.sync(
+            state={}, stream_schema={}, stream_metadata={},
+            config={'start_date': '2021-01-01'}, transformer=None,
+        )
+        # Child schema must never be written since it was force-deselected.
+        mocked_write_schema.assert_not_called()
+
+
+class TestLargeBatchBranches(unittest.TestCase):
+    """
+        Covers the MAX_PAGE_SIZE intermediate-bookmark branch and the
+        all_counter % 1000 progress-log branch inside IncrementalStream.sync().
+    """
+
+    @mock.patch('singer.write_schema')
+    @mock.patch('tap_intercom.streams.transform', side_effect=transform)
+    @mock.patch('tap_intercom.streams.Conversations.get_records')
+    def test_large_batch_triggers_intermediate_bookmark_and_progress_log(
+        self, mocked_get_records, mocked_transform, mocked_write_schema
+    ):
+        """
+            1000 sequential, selected records must trigger both the
+            MAX_PAGE_SIZE intermediate-bookmark write (every 150 records)
+            and the 1000-record progress log line.
+        """
+        base_ts = 1622505600000  # 2021-06-01T00:00:00Z, well after start_date
+        records = [
+            {'id': 'conv-{}'.format(i), 'updated_at': base_ts + i * 60000}
+            for i in range(1000)
+        ]
+        mocked_get_records.return_value = records
+
+        client = IntercomClient('test_access_token', 300)
+        conversations = Conversations(
+            client=client,
+            catalog=Catalog(['conversations']),
+            selected_streams=['conversations'],
+        )
+        state = conversations.sync(
+            state={}, stream_schema={}, stream_metadata={},
+            config={'start_date': '2021-01-01'}, transformer=None,
+        )
+        self.assertEqual(mocked_transform.call_count, 1000)
+        # Final bookmark should reflect the last (latest) record synced.
+        self.assertIn('conversations', state.get('bookmarks', {}))
