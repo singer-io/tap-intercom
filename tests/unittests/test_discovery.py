@@ -318,15 +318,16 @@ class TestBaseStreamCheckAccess(unittest.TestCase):
     # --- generic (non-401/403/404/scroll) API error during own probe -------
 
     @mock.patch('tap_intercom.client.IntercomClient.perform')
-    def test_check_access_generic_error_returns_false(self, mock_perform):
+    def test_check_access_generic_error_propagates(self, mock_perform):
         """
         Any other IntercomError (e.g. 402 payment required) raised while
-        probing the stream's own endpoint must be caught and return False,
-        never propagate and hard-fail discovery.
+        probing the stream's own endpoint is NOT a mapped auth failure and
+        must propagate so it reaches the client's existing retry/error path,
+        instead of being silently swallowed as an access exclusion.
         """
         mock_perform.side_effect = IntercomPaymentRequiredError('HTTP-error-code: 402')
-        result = Tags(client=self.client).check_access()
-        self.assertFalse(result)
+        with self.assertRaises(IntercomPaymentRequiredError):
+            Tags(client=self.client).check_access()
 
     # --- Companies probes the non-scroll list endpoint ---------------------
 
@@ -550,13 +551,13 @@ class TestApplyAccessChecks(unittest.TestCase):
         for name in expected_present:
             self.assertIn(name, schemas)
 
-    # --- all denied → empty catalog, no hard-fail ---------------------------
+    # --- all denied → dedicated actionable exception, no empty catalog -----
 
-    def test_all_unauthorized_does_not_raise(self):
+    def test_all_unauthorized_raises_forbidden_error(self):
         """
-        All streams inaccessible -> discovery must NOT raise. schemas ends up
-        empty and a warning is logged, but _apply_access_checks must return
-        normally so discover() can produce an (empty) catalog.
+        All streams inaccessible -> _apply_access_checks must raise
+        IntercomForbiddenError instead of silently leaving schemas empty,
+        so discovery never produces a usable-looking but empty catalog.
         """
         mock_streams = {
             'tags': _make_mock_stream_cls('tags', accessible=False),
@@ -565,29 +566,11 @@ class TestApplyAccessChecks(unittest.TestCase):
         schemas, field_metadata = _make_schemas(['tags', 'teams'])
 
         with mock.patch('tap_intercom.discover.STREAMS', mock_streams):
-            try:
+            with self.assertRaises(IntercomForbiddenError):
                 _apply_access_checks(self.client, schemas, field_metadata)
-            except Exception as exc:  # pragma: no cover
-                self.fail(
-                    '_apply_access_checks raised unexpectedly when all '
-                    'streams were denied: {}'.format(exc)
-                )
 
         self.assertEqual(schemas, {})
         self.assertEqual(field_metadata, {})
-
-    @mock.patch('tap_intercom.discover.LOGGER')
-    def test_all_unauthorized_logs_warning_for_empty_catalog(self, mock_logger):
-        """When schemas ends up empty, a WARNING must explain why."""
-        mock_streams = {
-            'tags': _make_mock_stream_cls('tags', accessible=False),
-        }
-        schemas, field_metadata = _make_schemas(['tags'])
-
-        with mock.patch('tap_intercom.discover.STREAMS', mock_streams):
-            _apply_access_checks(self.client, schemas, field_metadata)
-
-        mock_logger.warning.assert_called()
 
     # --- child pruned when its parent is denied (cascade) ------------------
 
@@ -745,23 +728,23 @@ class TestDiscover(unittest.TestCase):
         }
         self.assertEqual(catalog_ids, expected)
 
-    def test_discover_returns_empty_catalog_when_all_streams_denied(self):
+    def test_discover_propagates_forbidden_error_when_all_streams_denied(self):
         """
-        discover() must not raise when _apply_access_checks empties every
-        stream out of schemas/field_metadata — it should return a Catalog
-        with zero streams instead of propagating an error.
+        discover() must propagate IntercomForbiddenError raised by
+        _apply_access_checks instead of returning an empty Catalog.
         """
         def _empty_out(_client, schemas, field_metadata):
             schemas.clear()
             field_metadata.clear()
+            raise IntercomForbiddenError(
+                "HTTP-error-code: 403, Error: The credentials do not have 'read' access to any supported streams."
+            )
 
         with mock.patch(
             'tap_intercom.discover._apply_access_checks', side_effect=_empty_out
         ):
-            catalog = discover(self.client)
-
-        self.assertIsInstance(catalog, Catalog)
-        self.assertEqual(len(catalog.streams), 0)
+            with self.assertRaises(IntercomForbiddenError):
+                discover(self.client)
 
     def test_discover_invokes_apply_access_checks(self):
         """discover() must delegate access gating to _apply_access_checks."""

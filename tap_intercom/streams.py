@@ -73,10 +73,9 @@ class BaseStream:
         scroll_exists response, which proves a prior scroll session was
         open for this workspace).
 
-        Returns False on HTTP 401 (Unauthorized), 403 (Forbidden), or any
-        other unexpected API error — this method never raises, so a single
-        stream's probe failure can never hard-fail the whole discovery
-        process.
+        Returns False only on HTTP 401 (Unauthorized) or 403 (Forbidden).
+        Other Intercom errors are propagated so the client's existing retry
+        and error-handling logic can handle them.
         """
         parent_record_id = None
 
@@ -144,13 +143,6 @@ class BaseStream:
             LOGGER.warning(
                 "Stream %s is not accessible. Error: %s",
                 self.tap_stream_id, str(exc)
-            )
-            return False
-        except IntercomError as exc:
-            LOGGER.warning(
-                "Stream %s is not accessible. Error: %s",
-                self.tap_stream_id,
-                str(exc)
             )
             return False
 
