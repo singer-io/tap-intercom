@@ -27,10 +27,13 @@ class IntercomBaseTest(unittest.TestCase):
     PRIMARY_KEYS = "table-key-properties"
     FOREIGN_KEYS = "table-foreign-key-properties"
     REPLICATION_METHOD = "forced-replication-method"
+    PARENT_TAP_STREAM_ID = "parent-tap-stream-id"
+    EXPECTED_PARENT_STREAM = "expected-parent-stream"
     OBEYS_START_DATE = "obeys-start-date"
     API_LIMIT = "max-row-limit"
     INCREMENTAL = "INCREMENTAL"
     FULL_TABLE = "FULL_TABLE"
+    IS_FORBIDDEN_STREAM = "is-forbidden-stream"
     START_DATE_FORMAT = "%Y-%m-%dT00:00:00Z"
     RECORD_REPLICATION_KEY_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
     BOOKMARK_COMPARISON_FORMAT = "%Y-%m-%dT00:00:00+00:00"
@@ -109,7 +112,9 @@ class IntercomBaseTest(unittest.TestCase):
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.REPLICATION_KEYS: {"updated_at"},
-                self.OBEYS_START_DATE : True
+                self.EXPECTED_PARENT_STREAM: "conversations",
+                self.OBEYS_START_DATE : True,
+                self.IS_FORBIDDEN_STREAM: True
             },
             "contact_attributes": {
                 self.PRIMARY_KEYS: {"_sdc_record_hash"},
@@ -140,10 +145,13 @@ class IntercomBaseTest(unittest.TestCase):
             }
         }
 
-
     def expected_streams(self):
         """A set of expected stream names"""
-        return set(self.expected_metadata().keys())
+        return {
+            stream_name
+            for stream_name, metadata in self.expected_metadata().items()
+            if not metadata.get(self.IS_FORBIDDEN_STREAM, False)
+        }
 
     def child_streams(self):
         """

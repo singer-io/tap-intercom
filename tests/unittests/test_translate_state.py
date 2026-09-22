@@ -73,3 +73,28 @@ class TestTranslateState(unittest.TestCase):
 
         # Verify that returned state is same for new formatted state
         self.assertEqual(new_state, new_format_state)
+
+
+class TestGetStreamsToSync(unittest.TestCase):
+
+    def test_admins_stream_included_directly(self):
+        """When 'admins' is selected, get_streams_to_sync adds catalog admins stream."""
+        from tap_intercom.sync import get_streams_to_sync
+        from tap_intercom.streams import Admins
+
+        class _FakeStream:
+            def __init__(self, tap_stream_id):
+                self.tap_stream_id = tap_stream_id
+
+        class _FakeCatalog:
+            def get_stream(self, name):
+                return _FakeStream(name)
+
+        admins_obj = Admins.__new__(Admins)
+        admins_obj.tap_stream_id = 'admins'
+
+        result = get_streams_to_sync(
+            _FakeCatalog(), [admins_obj], ['admins']
+        )
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].tap_stream_id, 'admins')
