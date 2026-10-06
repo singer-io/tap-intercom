@@ -54,6 +54,8 @@ class DiscoveryTest(IntercomBaseTest):
                 expected_primary_keys = self.expected_primary_keys()[stream]
                 expected_replication_keys = self.expected_replication_keys()[stream]
                 expected_automatic_fields = expected_primary_keys | expected_replication_keys
+                expected_replication_method = self.expected_metadata()[stream].get(self.REPLICATION_METHOD)
+                expected_parent_stream = self.expected_metadata()[stream].get(self.EXPECTED_PARENT_STREAM)
 
                 # Collecting actual values...
                 schema_and_metadata = menagerie.get_annotated_schema(conn_id, catalog['stream_id'])
@@ -72,6 +74,12 @@ class DiscoveryTest(IntercomBaseTest):
                     stream_properties[0].get(
                         "metadata", {self.REPLICATION_KEYS: []}).get(self.REPLICATION_KEYS, [])
                 )
+
+                actual_replication_method = stream_properties[0].get(
+                    "metadata", {self.REPLICATION_METHOD: None}).get(self.REPLICATION_METHOD)
+
+                actual_parent_stream_id = stream_properties[0].get(
+                    "metadata", {}).get(self.PARENT_TAP_STREAM_ID)
                 ##########################################################################
                 ### metadata assertions
                 ##########################################################################
@@ -98,6 +106,12 @@ class DiscoveryTest(IntercomBaseTest):
                 # verify that primary keys and replication keys
                 # are given the inclusion of automatic in metadata.
                 self.assertSetEqual(expected_automatic_fields, actual_automatic_fields)
+
+                # verify the replication method matches our expectations
+                self.assertEqual(expected_replication_method, actual_replication_method)
+
+                # verify parent-tap-stream-id for child streams
+                self.assertEqual(expected_parent_stream, actual_parent_stream_id)
 
                 # Verify that all other fields have an inclusion of available
                 # This assumes there are no unsupported fields for SaaS sources

@@ -1,8 +1,11 @@
 # Changelog
 
-# 2.2.5
-  * Bump requests to 2.33.0 for security updates [#90](https://github.com/singer-io/tap-intercom/pull/90)
+## 2.3.0
+  * Adds parent-tap-stream-id field to catalog for child streams [#84](https://github.com/singer-io/tap-intercom/pull/84)
+  * Exclude un-authorised streams from catalog during discovery.[#91](https://github.com/singer-io/tap-intercom/pull/91)
 
+## 2.2.5
+  * Bump requests to 2.33.0 for security updates [#90](https://github.com/singer-io/tap-intercom/pull/90)
 
 ## 2.2.4
   * Fix interrupted bookmarking for conversations [#85](https://github.com/singer-io/tap-intercom/pull/85)

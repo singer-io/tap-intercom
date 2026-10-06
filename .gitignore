@@ -20,3 +20,16 @@ tap_intercom/.vscode/settings.json
 .DS_Store
 test_configuration.py
 tap_target_commands.sh
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*,cover
+.hypothesis/
+
+*.log
