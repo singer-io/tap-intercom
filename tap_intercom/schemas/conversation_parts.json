@@ -5,8 +5,19 @@
     "assigned_to": {
       "type": [
         "null",
-        "string"
-      ]
+        "object"
+      ],
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "id": {
+          "type": [
+            "null",
+            "string"
+          ]
+        }
+      }
     },
     "attachments": {
       "anyOf": [
